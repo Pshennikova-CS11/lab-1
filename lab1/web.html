@@ -2,9 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
     <title>Каталог навчальних ресурсів з рейтингом</title>
 </head>
 <body>
-
+<form id="createForm">
+    <div class="field">
+        <label for="field1Input">Поле 1</label>
+        <input id="field1Input" type="text" />
+        <p class="error-text" id="field1Error"></p>
+    </div>
+    <div class="field">
+        <label for="field2Select">Поле 2</label>
+        <select id="field2Select">
+            <option value="">Оберіть значення</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+        </select>
+        <p class="error-text" id="field2Error"></p>
+    </div>
+    <div class="field">
+        <label for="field3Text">Коментар</label>
+        <textarea id="field3Text" rows="4"></textarea>
+        <p class="error-text" id="field3Error"></p>
+    </div>
+    <div class="buttons">
+        <button type="submit">Додати</button>
+        <button type="button" id="resetBtn">Очистити</button>
+    </div>
+</form>
 </body>
 </html>
