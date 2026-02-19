@@ -43,6 +43,10 @@ input, select, textarea {
     margin-top: 4px;
 }
 
+.invalid {
+    border: 1px solid red;
+}
+
 textarea {
     min-height: 60px;
     resize: vertical;
@@ -57,6 +61,7 @@ button {
     margin-right: 5px;
     border: none;
     margin-top: 5px;
+    transition: 0.3s ease;
 }
 
 button:hover {
@@ -76,28 +81,52 @@ table {
 
 th, td {
     border: 1px solid #ccc;
-    padding: 6px;
+    padding: 8px;
+}
+
+th {
+    background: #f5f5f5;
 }
 
 .actions-col {
-    width: 110px;
+    width: 170px;
     text-align: center;
 }
 
-.delete-btn {
-    padding: 6px 12px;
+.actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.actions button {
+    padding: 6px 14px;
     font-size: 14px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.edit-btn {
+    background: #455a64;
+    color: white;
+}
+
+.edit-btn:hover {
+    background: #546e7a;
+    transform: scale(1.05);
+}
+
+.delete-btn {
     background: #d32f2f;
     color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
 }
 
 .delete-btn:hover {
     background: #b71c1c;
+    transform: scale(1.05);
 }
-
 
 .error {
     color: red;
@@ -105,8 +134,3 @@ th, td {
     min-height: 12px;
     margin-bottom: 2px;
 }
-
-.invalid {
-    border: 1px solid red;
-}
-
