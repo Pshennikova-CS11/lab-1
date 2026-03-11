@@ -12,6 +12,8 @@ const searchInput = document.getElementById("searchInput");
 const filterType = document.getElementById("filterType");
 const sortSelect = document.getElementById("sortSelect");
 
+const API_URL = "/api/resources";
+
 function readForm() {
     return {
         title: document.getElementById("title").value.trim(),
@@ -23,7 +25,9 @@ function readForm() {
 }
 
 function validate(data) {
+
     let isValid = true;
+
     clearErrors();
 
     if (!data.title) {
@@ -67,53 +71,86 @@ function isValidURL(url) {
 }
 
 function showError(inputId, errorId, message) {
+
     document.getElementById(inputId).classList.add("invalid");
     document.getElementById(errorId).textContent = message;
+
 }
 
 function clearErrors() {
+
     document.querySelectorAll(".invalid")
         .forEach(el => el.classList.remove("invalid"));
 
     document.querySelectorAll(".error")
         .forEach(el => el.textContent = "");
+
 }
 
-function addItem(data) {
-    state.resources.push({
-        id: state.nextId++,
-        createdAt: Date.now(),
-        ...data
+/* localStorage */
+// function addItem(data) {
+//     state.resources.push({
+//         id: state.nextId++,
+//         createdAt: Date.now(),
+//         ...data
+//     });
+// }
+
+// function deleteItem(id) {
+//     state.resources = state.resources.filter(r => r.id !== id);
+// }
+
+// function saveToStorage() {
+//     localStorage.setItem("resources", JSON.stringify(state.resources));
+// }
+
+// function loadFromStorage() {
+//     const data = localStorage.getItem("resources");
+//     if (data) {
+//         state.resources = JSON.parse(data);
+//     }
+// }
+
+/* через API */
+
+async function loadResources() {
+    const response = await fetch(API_URL);
+    const data = await response.json();
+    state.resources = data;
+    render();
+
+}
+
+async function createResource(data) {
+    await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    });
+
+}
+
+async function deleteResource(id) {
+    await fetch(`${API_URL}/${id}`, {
+        method: "DELETE"
+    });
+
+}
+
+async function updateResource(id, data) {
+    await fetch(`${API_URL}/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
     });
 }
 
-function deleteItem(id) {
-    state.resources = state.resources.filter(r => r.id !== id);
-}
-
-function saveToStorage() {
-    localStorage.setItem("resources", JSON.stringify(state.resources));
-}
-
-function loadFromStorage() {
-    const data = localStorage.getItem("resources");
-    if (data) {
-        state.resources = JSON.parse(data);
-
-        state.resources.forEach(r => {
-            if (!r.createdAt) {
-                r.createdAt = Date.now();
-            }
-        });
-
-        state.nextId = Math.max(0, ...state.resources.map(r => r.id)) + 1;
-    }
-}
-
 function render() {
-
     let filtered = [...state.resources];
-
     const searchValue = searchInput.value.toLowerCase();
     if (searchValue) {
         filtered = filtered.filter(r =>
@@ -144,38 +181,34 @@ function render() {
         <td><a href="${r.url}" target="_blank">Посилання</a></td>
         <td class="actions-col">
             <div class="actions">
+
                 <button type="button" data-id="${r.id}" class="edit-btn">
                     Редагувати
                 </button>
+
                 <button type="button" data-id="${r.id}" class="delete-btn">
                     Видалити
                 </button>
+
             </div>
         </td>
     </tr>
 `).join("");
+
 }
 
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const data = readForm();
     if (!validate(data)) return;
-
     if (editId) {
-        const index = state.resources.findIndex(r => r.id === editId);
-        state.resources[index] = {
-            ...state.resources[index],
-            ...data
-        };
+        await updateResource(editId, data);
         editId = null;
         document.getElementById("submitBtn").textContent = "Додати";
     } else {
-        addItem(data);
+        await createResource(data);
     }
-
-    saveToStorage();
-    render();
+    await loadResources();
     form.reset();
 });
 
@@ -184,18 +217,18 @@ resetBtn.addEventListener("click", () => {
     clearErrors();
     editId = null;
     document.getElementById("submitBtn").textContent = "Додати";
+
 });
 
-tbody.addEventListener("click", (e) => {
-    const id = Number(e.target.dataset.id);
-
+tbody.addEventListener("click", async (e) => {
+    const id = e.target.dataset.id;
     if (e.target.classList.contains("delete-btn")) {
-        deleteItem(id);
-        saveToStorage();
-        render();
+        await deleteResource(id);
+        await loadResources();
     }
 
     if (e.target.classList.contains("edit-btn")) {
+
         const item = state.resources.find(r => r.id === id);
 
         document.getElementById("title").value = item.title;
@@ -205,13 +238,15 @@ tbody.addEventListener("click", (e) => {
         document.getElementById("description").value = item.description;
 
         editId = id;
+
         document.getElementById("submitBtn").textContent = "Зберегти";
+
     }
+
 });
 
 searchInput.addEventListener("input", render);
 filterType.addEventListener("change", render);
 sortSelect.addEventListener("change", render);
 
-loadFromStorage();
-render();
+loadResources();
