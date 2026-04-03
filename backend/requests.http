@@ -1,0 +1,214 @@
+###
+### Головна сторінка застосунку
+GET http://localhost:3000/
+
+###
+
+### Отримати список усіх користувачів
+GET http://localhost:3000/api/users
+
+###
+
+### Створити користувача
+POST http://localhost:3000/api/users
+Content-Type: application/json
+
+{
+  "name": "Polina",
+  "email": "polina@example.com"
+}
+
+###
+
+### Отримати користувача за ID Заміни USER_ID на реальний id після створення користувача
+GET http://localhost:3000/api/users/USER_ID
+
+###
+
+### Оновити користувача за ID Заміни USER_ID на реальний id
+PUT http://localhost:3000/api/users/USER_ID
+Content-Type: application/json
+
+{
+  "name": "Polina Updated",
+  "email": "polina.updated@example.com"
+}
+
+###
+
+### Видалити користувача за ID Заміни USER_ID на реальний id
+DELETE http://localhost:3000/api/users/USER_ID
+
+###
+
+### Перевірка конфлікту: повторне створення користувача з тим самим email Очікувано: 409 Conflict
+POST http://localhost:3000/api/users
+Content-Type: application/json
+
+{
+  "name": "Polina Duplicate",
+  "email": "polina@example.com"
+}
+
+###
+
+### Отримати список усіх ресурсів
+GET http://localhost:3000/api/resources
+
+###
+
+### Створити ресурс
+POST http://localhost:3000/api/resources
+Content-Type: application/json
+
+{
+  "title": "JavaScript Basics 3 ",
+  "author": "Polina 3 ",
+  "url": "https://javascript.info",
+  "type": "article",
+  "description": "Корисний навчальний ресурс з JavaScript"
+}
+
+###
+
+### Отримати ресурс за ID Заміни RESOURCE_ID на реальний id
+GET http://localhost:3000/api/resources/RESOURCE_ID
+
+###
+
+### Оновити ресурс за ID Заміни RESOURCE_ID на реальний id
+PUT http://localhost:3000/api/resources/RESOURCE_ID
+Content-Type: application/json
+
+{
+  "title": "JavaScript Advanced",
+  "author": "Polina",
+  "url": "https://javascript.info",
+  "type": "course",
+  "description": "Оновлений опис навчального ресурсу"
+}
+
+###
+
+### Видалити ресурс за ID Заміни RESOURCE_ID на реальний id
+DELETE http://localhost:3000/api/resources/RESOURCE_ID
+
+### Отримати список усіх рейтингів
+GET http://localhost:3000/api/ratings
+
+###
+
+### Створити рейтинг Заміни RESOURCE_ID і USER_ID на реальні id
+POST http://localhost:3000/api/ratings
+Content-Type: application/json
+
+{
+  "resourceId": "bf41a662-3525-4770-a4e5-999219813390",
+  "userId": "7346c41a-56be-4981-b318-83d9536addc3",
+  "value": 3
+}
+
+###
+
+### Отримати рейтинг за ID Заміни RATING_ID на реальний id
+GET http://localhost:3000/api/ratings/RATING_ID
+
+###
+
+### Оновити рейтинг за ID Заміни RATING_ID, RESOURCE_ID і USER_ID
+PUT http://localhost:3000/api/ratings/RATING_ID
+Content-Type: application/json
+
+{
+  "resourceId": "RESOURCE_ID",
+  "userId": "USER_ID",
+  "value": 4
+}
+
+###
+
+### Видалити рейтинг за ID Заміни RATING_ID на реальний id
+DELETE http://localhost:3000/api/ratings/RATING_ID
+
+###
+
+### Отримати список усіх коментарів
+GET http://localhost:3000/api/comments
+
+###
+
+### Створити коментар Заміни RESOURCE_ID і USER_ID на реальні id
+POST http://localhost:3000/api/comments
+Content-Type: application/json
+
+{
+  "resourceId": "46fe36e1-55b9-4bd6-a8e4-623d5f8da629",
+  "userId": "7346c41a-56be-4981-b318-83d9536addc3",
+  "text": "Дуже корисний навчальний ресурс"
+}
+
+###
+
+### Отримати коментар за ID Заміни COMMENT_ID на реальний id
+GET http://localhost:3000/api/comments/COMMENT_ID
+
+###
+
+### Оновити коментар за ID Заміни COMMENT_ID, RESOURCE_ID і USER_ID
+PUT http://localhost:3000/api/comments/COMMENT_ID
+Content-Type: application/json
+
+{
+  "resourceId": "46fe36e1-55b9-4bd6-a8e4-623d5f8da629",
+  "userId": "7346c41a-56be-4981-b318-83d9536addc3",
+  "text": "Оновлений коментар до ресурсу"
+}
+
+###
+
+### Видалити коментар за ID Заміни COMMENT_ID на реальний id
+DELETE http://localhost:3000/api/comments/COMMENT_ID
+
+###
+
+### Помилка валідації ресурсу Очікувано: 400 Bad Request
+POST http://localhost:3000/api/resources
+Content-Type: application/json
+
+{
+  "title": "JS",
+  "author": "",
+  "url": "wrong-url",
+  "type": "article",
+  "description": "bad"
+}
+
+###
+
+### Неіснуючий ресурс Очікувано: 404 Not Found
+GET http://localhost:3000/api/resources/non-existing-id
+
+###
+
+### Неіснуючий користувач Очікувано: 404 Not Found
+GET http://localhost:3000/api/users/non-existing-id
+
+###
+
+### Фільтрація ресурсів за типом
+GET http://localhost:3000/api/resources?type=article
+
+###
+
+### Фільтрація ресурсів за автором
+GET http://localhost:3000/api/resources?author=polina
+
+###
+
+### Сортування ресурсів за датою створення (від нових до старих)
+GET http://localhost:3000/api/resources?sortBy=createdAt&order=desc
+
+###
+
+### Сортування ресурсів за датою створення (від старих до нових)
+GET http://localhost:3000/api/resources?sortBy=createdAt&order=asc

@@ -1,0 +1,232 @@
+### HEALTH
+
+GET http://localhost:3001/api/health
+
+### RESOURCES
+### Отримати всі ресурси
+GET http://localhost:3001/api/resources?page=1&pageSize=1000
+
+### Отримати ресурси з пошуком
+GET http://localhost:3001/api/resources?search=javascript&page=1&pageSize=1000
+
+### Отримати ресурси з фільтром за типом
+GET http://localhost:3001/api/resources?type=article&page=1&pageSize=1000
+
+### Отримати ресурси з сортуванням
+GET http://localhost:3001/api/resources?sortBy=createdAt&sortDir=desc&page=1&pageSize=1000
+
+### Створити ресурс
+POST http://localhost:3001/api/resources
+Content-Type: application/json
+
+{
+  "title": "JavaScript Tutorial",
+  "author": "Polina",
+  "url": "https://javascript.info",
+  "type": "article",
+  "description": "Complete JS tutorial"
+}
+
+### Отримати ресурс за id
+GET http://localhost:3001/api/resources/PUT_RESOURCE_ID_HERE
+
+### Частково оновити ресурс
+PATCH http://localhost:3001/api/resources/***
+Content-Type: application/json
+
+{
+  "title": "Updated JavaScript Tutorial 3"
+}
+
+### Видалити ресурс
+DELETE http://localhost:3001/api/resources/PUT_RESOURCE_ID_HERE
+
+### 400 Bad Request - невалідний ресурс
+POST http://localhost:3001/api/resources
+Content-Type: application/json
+
+{
+  "title": "",
+  "author": "Polina",
+  "url": "not-a-url",
+  "type": "",
+  "description": ""
+}
+
+### ========================================
+### USERS
+### ========================================
+
+### Отримати всіх користувачів
+GET http://localhost:3001/api/users?page=1&pageSize=1000
+
+### Пошук користувачів
+GET http://localhost:3001/api/users?search=polina&page=1&pageSize=1000
+
+### Створити користувача
+POST http://localhost:3001/api/users
+Content-Type: application/json
+
+{
+  "name": "Polina",
+  "email": "polina@example.com"
+}
+
+### Отримати користувача за id
+GET http://localhost:3001/api/users/PUT_USER_ID_HERE
+
+### Частково оновити користувача
+PATCH http://localhost:3001/api/users/PUT_USER_ID_HERE
+Content-Type: application/json
+
+{
+  "name": "Polina Updated"
+}
+
+### Видалити користувача
+DELETE http://localhost:3001/api/users/PUT_USER_ID_HERE
+
+### 409 Conflict - дубль email
+POST http://localhost:3001/api/users
+Content-Type: application/json
+
+{
+  "name": "Polina Duplicate",
+  "email": "polina@example.com"
+}
+
+### 400 Bad Request - невалідний email
+POST http://localhost:3001/api/users
+Content-Type: application/json
+
+{
+  "name": "Test User",
+  "email": "invalid-email"
+}
+
+### ========================================
+### COMMENTS
+### ========================================
+
+### Отримати всі коментарі
+GET http://localhost:3001/api/comments?page=1&pageSize=1000
+
+### Отримати коментарі за resourceId
+GET http://localhost:3001/api/comments?resourceId=PUT_RESOURCE_ID_HERE&page=1&pageSize=1000
+
+### Отримати коментарі за userId
+GET http://localhost:3001/api/comments?userId=PUT_USER_ID_HERE&page=1&pageSize=1000
+
+### Пошук по тексту коментаря
+GET http://localhost:3001/api/comments?search=good&page=1&pageSize=1000
+
+### Створити коментар
+POST http://localhost:3001/api/comments
+Content-Type: application/json
+
+{
+  "resourceId": "PUT_RESOURCE_ID_HERE",
+  "userId": "PUT_USER_ID_HERE",
+  "text": "Very useful resource"
+}
+
+### Отримати коментар за id
+GET http://localhost:3001/api/comments/PUT_COMMENT_ID_HERE
+
+### Частково оновити коментар
+PATCH http://localhost:3001/api/comments/PUT_COMMENT_ID_HERE
+Content-Type: application/json
+
+{
+  "text": "Updated comment text"
+}
+
+### Видалити коментар
+DELETE http://localhost:3001/api/comments/PUT_COMMENT_ID_HERE
+
+### 404 Not Found - коментар до неіснуючого ресурсу
+POST http://localhost:3001/api/comments
+Content-Type: application/json
+
+{
+  "resourceId": "not-existing-resource-id",
+  "userId": "PUT_USER_ID_HERE",
+  "text": "Comment for missing resource"
+}
+
+### ========================================
+### RATINGS
+### ========================================
+
+### Отримати всі рейтинги
+GET http://localhost:3001/api/ratings?page=1&pageSize=1000
+
+### Отримати рейтинги за resourceId
+GET http://localhost:3001/api/ratings?resourceId=PUT_RESOURCE_ID_HERE&page=1&pageSize=1000
+
+### Отримати рейтинги за userId
+GET http://localhost:3001/api/ratings?userId=PUT_USER_ID_HERE&page=1&pageSize=1000
+
+### Отримати рейтинги з фільтром за value
+GET http://localhost:3001/api/ratings?value=5&page=1&pageSize=1000
+
+### Отримати рейтинги з сортуванням
+GET http://localhost:3001/api/ratings?sortBy=createdAt&sortDir=desc&page=1&pageSize=1000
+
+### Створити рейтинг
+POST http://localhost:3001/api/ratings
+Content-Type: application/json
+
+{
+  "resourceId": "PUT_RESOURCE_ID_HERE",
+  "userId": "PUT_USER_ID_HERE",
+  "value": 5
+}
+
+### Отримати рейтинг за id
+GET http://localhost:3001/api/ratings/PUT_RATING_ID_HERE
+
+### Частково оновити рейтинг
+PATCH http://localhost:3001/api/ratings/PUT_RATING_ID_HERE
+Content-Type: application/json
+
+{
+  "value": 4
+}
+
+### Видалити рейтинг
+DELETE http://localhost:3001/api/ratings/PUT_RATING_ID_HERE
+
+### 409 Conflict - той самий userId + resourceId
+POST http://localhost:3001/api/ratings
+Content-Type: application/json
+
+{
+  "resourceId": "PUT_RESOURCE_ID_HERE",
+  "userId": "PUT_USER_ID_HERE",
+  "value": 3
+}
+
+### 400 Bad Request - невалідна оцінка
+POST http://localhost:3001/api/ratings
+Content-Type: application/json
+
+{
+  "resourceId": "PUT_RESOURCE_ID_HERE",
+  "userId": "PUT_USER_ID_HERE",
+  "value": 7
+}
+
+### ========================================
+### 404 NOT FOUND
+### ========================================
+
+GET http://localhost:3001/api/resources/not-existing-id
+###
+
+GET http://localhost:3001/api/users/not-existing-id
+###
+
+GET http://localhost:3001/api/comments/not-existing-id
+###
+GET http://localhost:3001/api/ratings/not-existing-id
