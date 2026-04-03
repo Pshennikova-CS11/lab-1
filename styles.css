@@ -1,67 +1,94 @@
-@font-face{
+@font-face {
     font-family: Montserrat-Regular;
     src: url(Montserrat-Regular.ttf);
 }
 
 * {
     box-sizing: border-box;
-    font-family: Montserrat-Regular;
+    font-family: Montserrat-Regular, sans-serif;
     font-size: 17px;
-}
-
-h1{
-    margin-bottom: 10px;
-    font-size: 28px;
-}
-
-h2 {
-    margin-top: 3px;
-    margin-bottom: 15px;
 }
 
 body {
     margin: 30px;
+    background: #f8f8f8;
+}
+
+h1 {
+    margin-bottom: 20px;
+    font-size: 28px;
+}
+
+h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 22px;
 }
 
 .layout {
     display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.entity-block {
+    display: flex;
     gap: 60px;
-}
-
-section {
-    flex: 1;
-}
-
-label {
-    display: block;
-    margin-top: 10px;
-}
-
-input, select, textarea {
     width: 100%;
-    padding: 6px;
-    margin-top: 4px;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    align-items: flex-start;
 }
 
-.invalid {
-    border: 1px solid red;
-}
-
-textarea {
-    min-height: 60px;
-    resize: vertical;
+.form-buttons {
+    margin-top: 0PX;
 }
 
 button {
     cursor: pointer;
-    padding: 13px 50px;
+    padding: 10px 20px;
     border-radius: 5px;
     background: #263238;
     color: #ffffff;
-    margin-right: 5px;
+    margin-right: 8px;
     border: none;
-    margin-top: 5px;
+    margin-top: 0px;
     transition: 0.3s ease;
+}
+
+.form-section,
+.list-section {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+label {
+    display: block;
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+}
+
+textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+.invalid {
+    border: 1px solid red;
 }
 
 button:hover {
@@ -76,12 +103,14 @@ button:disabled {
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    margin-top: 18px;
 }
 
-th, td {
+th,
+td {
     border: 1px solid #ccc;
     padding: 8px;
+    vertical-align: top;
 }
 
 th {
@@ -89,7 +118,7 @@ th {
 }
 
 .actions-col {
-    width: 170px;
+    width: 270px;
     text-align: center;
 }
 
@@ -97,33 +126,53 @@ th {
     display: flex;
     justify-content: center;
     gap: 10px;
+    flex-wrap: nowrap;
 }
 
-.actions button {
-    padding: 6px 14px;
-    font-size: 14px;
+.actions button,
+.actions-col button {
+    width: 120px;
+    height: 40px;
+    padding: 0;
+    font-size: 15px;
+    font-family: Montserrat-Regular, sans-serif;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
     border-radius: 5px;
     border: none;
-    cursor: pointer;
     transition: 0.3s ease;
 }
 
-.edit-btn {
+.edit-btn,
+.edit-user-btn,
+.edit-comment-btn,
+.edit-rating-btn {
     background: #455a64;
     color: white;
 }
 
-.edit-btn:hover {
+.edit-btn:hover,
+.edit-user-btn:hover,
+.edit-comment-btn:hover,
+.edit-rating-btn:hover {
     background: #546e7a;
     transform: scale(1.05);
 }
 
-.delete-btn {
+.delete-btn,
+.delete-user-btn,
+.delete-comment-btn,
+.delete-rating-btn {
     background: #d32f2f;
     color: white;
 }
 
-.delete-btn:hover {
+.delete-btn:hover,
+.delete-user-btn:hover,
+.delete-comment-btn:hover,
+.delete-rating-btn:hover {
     background: #b71c1c;
     transform: scale(1.05);
 }
@@ -131,6 +180,16 @@ th {
 .error {
     color: red;
     font-size: 12px;
-    min-height: 12px;
-    margin-bottom: 2px;
+    min-height: 14px;
+    margin-bottom: 4px;
+}
+
+@media (max-width: 1000px) {
+    .entity-block {
+        flex-direction: column;
+    }
+
+    .actions {
+        flex-wrap: wrap;
+    }
 }
