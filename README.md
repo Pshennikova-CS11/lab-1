@@ -44,25 +44,25 @@ GET /api/resources/:id/comments — отримати коментарі ресу
 
 Отримати список ресурсів: curl http://localhost:3000/api/resources
 Створити ресурс: curl -X POST http://localhost:3000/api/resources \
-                -H "Content-Type: application/json" \
-                -d "{\"title\":\"JavaScript Guide\",\"url\":\"https://javascript.info\",\"type\":\"article\",\"description\":\"Довідник з JavaScript\",\"author\":\"Поліна\"}"
+                 -H "Content-Type: application/json" \
+                 -d "{\"title\":\"JavaScript Guide\",\"url\":\"https://javascript.info\",\"type\":\"article\",\"description\":\"Довідник з JavaScript\",\"author\":\"Поліна\"}"
 
 Отримати ресурс за ID: curl http://localhost:3000/api/resources/RESOURCE_ID
 
 Оновити ресурс: curl -X PUT http://localhost:3000/api/resources/RESOURCE_ID \
-                    -H "Content-Type: application/json" \
-                    -d "{\"title\":\"Оновлений ресурс\",\"url\":\"https://example.com\",\"type\":\"course\",\"description\":\"Оновлений опис\",\"author\":\"Поліна\"}"
+                     -H "Content-Type: application/json" \
+                     -d "{\"title\":\"Оновлений ресурс\",\"url\":\"https://example.com\",\"type\":\"course\",\"description\":\"Оновлений опис\",\"author\":\"Поліна\"}"
 
 Видалити ресурс: curl -X DELETE http://localhost:3000/api/resources/RESOURCE_ID
 
 Створити користувача: curl -X POST http://localhost:3000/api/users \
-                          -H "Content-Type: application/json" \
-                          -d "{\"name\":\"Поліна\",\"email\":\"polina@example.com\"}"
+                           -H "Content-Type: application/json" \
+                           -d "{\"name\":\"Поліна\",\"email\":\"polina@example.com\"}"
 
 Отримати список користувачів: curl http://localhost:3000/api/users
 
 Помилка валідації (400 Bad Request): curl -X POST http://localhost:3000/api/resources \
-                                    -H "Content-Type: application/json" \
-                                    -d "{\"title\":\"Без автора\",\"url\":\"https://example.com\",\"type\":\"article\"}"
+                                     -H "Content-Type: application/json" \
+                                     -d "{\"title\":\"Без автора\",\"url\":\"https://example.com\",\"type\":\"article\"}"
 
 Неіснуючий ID (404 Not Found): curl http://localhost:3000/api/resources/non-existing-id
