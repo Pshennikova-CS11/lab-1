@@ -3,10 +3,10 @@ export interface ApiItemResponse<T> {
 }
 
 export interface ApiListResponse<T> {
-    items: T[];
-    total: number;
-    page: number;
-    pageSize: number;
+    items: T[]; //дані
+    total: number; //кількість записів у бд
+    page: number; //номер сторінки
+    pageSize: number; //кількість елементів на сторінці
 }
 
 export interface ApiErrorResponse {

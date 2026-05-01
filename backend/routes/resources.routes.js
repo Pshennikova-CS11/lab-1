@@ -1,12 +1,20 @@
 const express = require("express");
-const controller = require("../controllers/resources.controller");
-
 const router = express.Router();
 
-router.get("/", controller.getAll);
-router.get("/:id", controller.getById);
-router.post("/", controller.create);
-router.put("/:id", controller.update);
-router.delete("/:id", controller.remove);
+const {
+    getAll,
+    getById,
+    getWithComments,
+    create,
+    update,
+    remove
+} = require("../controllers/resources.controller");
+
+router.get("/", getAll); // GET list
+router.get("/:id/comments", getWithComments); // GET resource with comments (JOIN)
+router.get("/:id", getById); // GET by id
+router.post("/", create); // POST create
+router.put("/:id", update); // PUT update
+router.delete("/:id", remove); // DELETE
 
 module.exports = router;

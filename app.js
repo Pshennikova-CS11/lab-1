@@ -66,12 +66,12 @@ function clearErrors() {
 }
 
 function getResourceTitle(resourceId) {
-    const resource = state.resources.find(r => r.id === resourceId);
+    const resource = state.resources.find(r => Number(r.id) === Number(resourceId));
     return resource ? resource.title : resourceId;
 }
 
 function getUserName(userId) {
-    const user = state.users.find(u => u.id === userId);
+    const user = state.users.find(u => Number(u.id) === Number(userId));
     return user ? user.name : userId;
 }
 
@@ -404,11 +404,11 @@ function render() {
     }
 
     if (sortSelect.value === "newest") {
-        filtered.sort((a, b) => b.createdAt - a.createdAt);
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     if (sortSelect.value === "oldest") {
-        filtered.sort((a, b) => a.createdAt - b.createdAt);
+        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     }
 
     tbody.innerHTML = filtered.map((r, index) => `
@@ -417,6 +417,7 @@ function render() {
             <td>${r.title}</td>
             <td>${r.author}</td>
             <td>${r.type}</td>
+            <td>${Number(r.averageRating || 0).toFixed(1)}</td>
             <td><a href="${r.url}" target="_blank">Посилання</a></td>
             <td class="actions-col">
                 <div class="actions">
@@ -495,12 +496,14 @@ form.addEventListener("submit", async (e) => {
     const isValid = validate(data);
 
     if (!isValid) {
-        console.error("Client validation error: invalid resource data");
+        if (!confirm("Форма невалідна. Відправити все одно?")) {
+            return;
+        }
     }
 
     let result;
 
-    if (editId) {
+    if (editId !== null) {
         result = await updateResource(editId, data);
 
         if (result.ok) {
@@ -511,7 +514,14 @@ form.addEventListener("submit", async (e) => {
         result = await createResource(data);
     }
 
-    if (!result.ok) return;
+    if (!result.ok) {
+        const message = result.error?.error?.message || "Помилка";
+
+        alert(message); // 🔥 найпростіше
+
+        console.error("API error:", result.error);
+        return;
+    }
 
     await loadResources();
     renderComments();
@@ -530,26 +540,35 @@ resetBtn.addEventListener("click", () => {
 });
 
 tbody.addEventListener("click", async (e) => {
-    const id = e.target.dataset.id;
+    const button = e.target.closest("button");
+    if (!button) return;
 
-    if (e.target.classList.contains("delete-btn")) {
+    const id = Number(button.dataset.id);
+    if (!Number.isInteger(id)) return;
+
+    if (button.classList.contains("delete-btn")) {
         const result = await deleteResource(id);
-        if (!result.ok) return;
+        if (!result.ok) {
+            const message = result.error?.error?.message || "Помилка";
+            alert(message);
+            console.error("API error:", result.error);
+            return;
+        }
 
         await loadResources();
         await loadComments();
         await loadRatings();
     }
 
-    if (e.target.classList.contains("edit-btn")) {
-        const item = state.resources.find(r => r.id === id);
+    if (button.classList.contains("edit-btn")) {
+        const item = state.resources.find(r => Number(r.id) === id);
         if (!item) return;
 
         document.getElementById("title").value = item.title;
         document.getElementById("author").value = item.author;
         document.getElementById("url").value = item.url;
         document.getElementById("type").value = item.type;
-        document.getElementById("description").value = item.description;
+        document.getElementById("description").value = item.description || "";
 
         editId = id;
         document.getElementById("submitBtn").textContent = "Зберегти";
@@ -565,12 +584,14 @@ if (userForm) {
         const isValid = validateUserForm(data);
 
         if (!isValid) {
-            console.error("Client validation error: invalid user data");
+            if (!confirm("Форма невалідна. Відправити все одно?")) {
+                return;
+            }
         }
 
         let result;
 
-        if (editUserId) {
+        if (editUserId !== null) {
             result = await updateUser(editUserId, data);
 
             if (result.ok) {
@@ -581,7 +602,14 @@ if (userForm) {
             result = await createUser(data);
         }
 
-        if (!result.ok) return;
+        if (!result.ok) {
+            const message = result.error?.error?.message || "Помилка";
+
+            alert(message);
+
+            console.error("API error:", result.error);
+            return;
+        }
 
         await loadUsers();
         renderComments();
@@ -604,19 +632,28 @@ if (userResetBtn) {
 
 if (usersTableBody) {
     usersTableBody.addEventListener("click", async (e) => {
-        const id = e.target.dataset.id;
+        const button = e.target.closest("button");
+        if (!button) return;
 
-        if (e.target.classList.contains("delete-user-btn")) {
+        const id = Number(button.dataset.id);
+        if (!Number.isInteger(id)) return;
+
+        if (button.classList.contains("delete-user-btn")) {
             const result = await deleteUser(id);
-            if (!result.ok) return;
+            if (!result.ok) {
+                const message = result.error?.error?.message || "Помилка";
+                alert(message);
+                console.error("API error:", result.error);
+                return;
+            }
 
             await loadUsers();
             await loadComments();
             await loadRatings();
         }
 
-        if (e.target.classList.contains("edit-user-btn")) {
-            const item = state.users.find(u => u.id === id);
+        if (button.classList.contains("edit-user-btn")) {
+            const item = state.users.find(u => Number(u.id) === id);
             if (!item) return;
 
             document.getElementById("userName").value = item.name;
@@ -637,12 +674,14 @@ if (commentForm) {
         const isValid = validateCommentForm(data);
 
         if (!isValid) {
-            console.error("Client validation error: invalid comment data");
+            if (!confirm("Форма невалідна. Відправити все одно?")) {
+                return;
+            }
         }
 
         let result;
 
-        if (editCommentId) {
+        if (editCommentId !== null) {
             result = await updateComment(editCommentId, data);
 
             if (result.ok) {
@@ -653,7 +692,14 @@ if (commentForm) {
             result = await createComment(data);
         }
 
-        if (!result.ok) return;
+        if (!result.ok) {
+            const message = result.error?.error?.message || "Помилка";
+
+            alert(message);
+
+            console.error("API error:", result.error);
+            return;
+        }
 
         await loadComments();
         commentForm.reset();
@@ -673,17 +719,27 @@ if (commentResetBtn) {
 
 if (commentsTableBody) {
     commentsTableBody.addEventListener("click", async (e) => {
-        const id = e.target.dataset.id;
+        const button = e.target.closest("button");
+        if (!button) return;
 
-        if (e.target.classList.contains("delete-comment-btn")) {
+        const id = Number(button.dataset.id);
+        if (!Number.isInteger(id)) return;
+
+        if (button.classList.contains("delete-comment-btn")) {
             const result = await deleteComment(id);
-            if (!result.ok) return;
+            if (!result.ok) {
+                const message = result.error?.error?.message || "Помилка";
+
+                alert(message);
+                console.error("API error:", result.error);
+                return;
+            }
 
             await loadComments();
         }
 
-        if (e.target.classList.contains("edit-comment-btn")) {
-            const item = state.comments.find(c => c.id === id);
+        if (button.classList.contains("edit-comment-btn")) {
+            const item = state.comments.find(c => Number(c.id) === id);
             if (!item) return;
 
             document.getElementById("commentResourceId").value = item.resourceId;
@@ -696,9 +752,7 @@ if (commentsTableBody) {
     });
 }
 
-/* =========================
-   EVENTS: RATINGS
-   ========================= */
+/* EVENTS: RATINGS */
 if (ratingForm) {
     ratingForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -707,12 +761,14 @@ if (ratingForm) {
         const isValid = validateRatingForm(data);
 
         if (!isValid) {
-            console.error("Client validation error: invalid rating data");
+            if (!confirm("Форма невалідна. Відправити все одно?")) {
+                return;
+            }
         }
 
         let result;
 
-        if (editRatingId) {
+        if (editRatingId !== null) {
             result = await updateRating(editRatingId, data);
 
             if (result.ok) {
@@ -723,9 +779,17 @@ if (ratingForm) {
             result = await createRating(data);
         }
 
-        if (!result.ok) return;
+        if (!result.ok) {
+            const message = result.error?.error?.message || "Помилка";
+
+            alert(message);
+
+            console.error("API error:", result.error);
+            return;
+        }
 
         await loadRatings();
+        await loadResources();
         ratingForm.reset();
         clearErrors();
         renderSelectOptions();
@@ -743,17 +807,28 @@ if (ratingResetBtn) {
 
 if (ratingsTableBody) {
     ratingsTableBody.addEventListener("click", async (e) => {
-        const id = e.target.dataset.id;
+        const button = e.target.closest("button");
+        if (!button) return;
 
-        if (e.target.classList.contains("delete-rating-btn")) {
+        const id = Number(button.dataset.id);
+        if (!Number.isInteger(id)) return;
+
+        if (button.classList.contains("delete-rating-btn")) {
             const result = await deleteRating(id);
-            if (!result.ok) return;
+
+            if (!result.ok) {
+                const message = result.error?.error?.message || "Помилка";
+                alert(message);
+                console.error("API error:", result.error);
+                return;
+            }
 
             await loadRatings();
+            await loadResources();
         }
 
-        if (e.target.classList.contains("edit-rating-btn")) {
-            const item = state.ratings.find(r => r.id === id);
+        if (button.classList.contains("edit-rating-btn")) {
+            const item = state.ratings.find(r => Number(r.id) === id);
             if (!item) return;
 
             document.getElementById("ratingResourceId").value = item.resourceId;
@@ -766,16 +841,12 @@ if (ratingsTableBody) {
     });
 }
 
-/* =========================
-   FILTERS
-   ========================= */
+/* FILTERS */
 searchInput.addEventListener("input", render);
 filterType.addEventListener("change", render);
 sortSelect.addEventListener("change", render);
 
-/* =========================
-   INIT
-   ========================= */
+/* INIT */
 async function init() {
     await loadResources();
     await loadUsers();

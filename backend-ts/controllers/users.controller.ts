@@ -1,68 +1,68 @@
 import { NextFunction, Request, Response } from "express";
-import { CreateUserDto, PatchUserDto, UserResponseDto } from "../dtos/users.dto";
+import { CreateUserDto, UpdateUserDto, UserResponseDto } from "../dtos/users.dto";
 import { usersService } from "../services/users.service";
 import { ApiItemResponse, ApiListResponse } from "../types/api";
 import { UserListQuery } from "../types/user";
 
-export function getUsers(
+export async function getUsers(
     req: Request<{}, ApiListResponse<UserResponseDto>, never, UserListQuery>,
-    res: Response<ApiListResponse<UserResponseDto>>,
+    res: Response,
     next: NextFunction
-): void {
+): Promise<void> {
     try {
-        const result = usersService.getAll(req.query);
+        const result = await usersService.getAll(req.query);
         res.status(200).json(result);
     } catch (error) {
         next(error);
     }
 }
 
-export function getUserById(
+export async function getUserById(
     req: Request<{ id: string }, ApiItemResponse<UserResponseDto>>,
-    res: Response<ApiItemResponse<UserResponseDto>>,
+    res: Response,
     next: NextFunction
-): void {
+): Promise<void> {
     try {
-        const result = usersService.getById(req.params.id);
+        const result = await usersService.getById(req.params.id);
         res.status(200).json(result);
     } catch (error) {
         next(error);
     }
 }
 
-export function createUser(
+export async function createUser(
     req: Request<{}, ApiItemResponse<UserResponseDto>, CreateUserDto>,
-    res: Response<ApiItemResponse<UserResponseDto>>,
+    res: Response,
     next: NextFunction
-): void {
+): Promise<void> {
     try {
-        const result = usersService.create(req.body);
+        const result = await usersService.create(req.body);
         res.status(201).json(result);
     } catch (error) {
         next(error);
     }
 }
 
-export function patchUser(
-    req: Request<{ id: string }, ApiItemResponse<UserResponseDto>, PatchUserDto>,
-    res: Response<ApiItemResponse<UserResponseDto>>,
+export async function patchUser(
+    req: Request<{ id: string }, ApiItemResponse<UserResponseDto>, UpdateUserDto>,
+    res: Response,
     next: NextFunction
-): void {
+): Promise<void> {
     try {
-        const result = usersService.patch(req.params.id, req.body);
+        const result = await usersService.patch(req.params.id, req.body);
         res.status(200).json(result);
     } catch (error) {
         next(error);
     }
 }
 
-export function deleteUser(
+export async function deleteUser(
     req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
-): void {
+): Promise<void> {
     try {
-        usersService.softDelete(req.params.id);
+        await usersService.softDelete(req.params.id);
         res.status(204).send();
     } catch (error) {
         next(error);

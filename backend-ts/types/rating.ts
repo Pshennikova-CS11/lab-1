@@ -1,7 +1,7 @@
 export interface RatingEntity {
-    id: string;
-    resourceId: string;
-    userId: string;
+    id: number;
+    resourceId: number;
+    userId: number;
     value: number;
     createdAt: string;
     updatedAt: string;

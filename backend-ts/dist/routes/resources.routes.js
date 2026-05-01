@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const resources_controller_1 = require("../controllers/resources.controller");
+const validate_1 = require("../middleware/validate");
+const resources_validator_1 = require("../validators/resources.validator");
+const router = (0, express_1.Router)();
+router.get("/", resources_controller_1.getResources);
+router.get("/:id", resources_controller_1.getResourceById);
+router.post("/", (0, validate_1.validateBody)(resources_validator_1.validateCreateResource), resources_controller_1.createResource);
+router.patch("/:id", (0, validate_1.validateBody)(resources_validator_1.validatePatchResource), resources_controller_1.patchResource);
+router.delete("/:id", resources_controller_1.deleteResource);
+exports.default = router;

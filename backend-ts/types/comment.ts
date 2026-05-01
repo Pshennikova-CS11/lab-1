@@ -1,7 +1,7 @@
 export interface CommentEntity {
-    id: string;
-    resourceId: string;
-    userId: string;
+    id: number;
+    resourceId: number;
+    userId: number;
     text: string;
     createdAt: string;
     updatedAt: string;

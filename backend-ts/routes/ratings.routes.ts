@@ -1,11 +1,5 @@
 import { Router } from "express";
-import {
-    createRating,
-    deleteRating,
-    getRatingById,
-    getRatings,
-    patchRating
-} from "../controllers/ratings.controller";
+import { getRatings, getRatingById, createRating, patchRating, deleteRating} from "../controllers/ratings.controller";
 import { validateBody } from "../middleware/validate";
 import { validateCreateRating, validatePatchRating } from "../validators/ratings.validator";
 
@@ -15,6 +9,7 @@ router.get("/", getRatings);
 router.get("/:id", getRatingById);
 router.post("/", validateBody(validateCreateRating), createRating);
 router.patch("/:id", validateBody(validatePatchRating), patchRating);
+router.put("/:id", validateBody(validatePatchRating), patchRating);
 router.delete("/:id", deleteRating);
 
 export default router;

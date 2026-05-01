@@ -580,8 +580,6 @@ if (form) {
             return;
         }
 
-        normalizeItemData(result.data);
-
         await loadResources();
         renderComments();
         renderRatings();
@@ -608,8 +606,8 @@ if (tbody) {
         const target = e.target;
         if (!(target instanceof HTMLElement)) return;
 
-        const id = target.dataset.id;
-        if (!id) return;
+        const id = Number(target.dataset.id);
+        if (!Number.isInteger(id)) return;
 
         if (target.classList.contains("delete-btn")) {
             const result = await deleteResource(id);
@@ -625,7 +623,7 @@ if (tbody) {
         }
 
         if (target.classList.contains("edit-btn")) {
-            const item = state.resources.find((r) => r.id === id);
+            const item = state.resources.find((r) => Number(r.id) === Number(id));
             if (!item) return;
 
             document.getElementById("title").value = item.title ?? "";
@@ -674,8 +672,6 @@ if (userForm) {
             return;
         }
 
-        normalizeItemData(result.data);
-
         await loadUsers();
         renderComments();
         renderRatings();
@@ -702,8 +698,8 @@ if (usersTableBody) {
         const target = e.target;
         if (!(target instanceof HTMLElement)) return;
 
-        const id = target.dataset.id;
-        if (!id) return;
+        const id = Number(target.dataset.id);
+        if (!Number.isInteger(id)) return;
 
         if (target.classList.contains("delete-user-btn")) {
             const result = await deleteUser(id);
@@ -719,7 +715,7 @@ if (usersTableBody) {
         }
 
         if (target.classList.contains("edit-user-btn")) {
-            const item = state.users.find((u) => u.id === id);
+            const item = state.users.find((u) => Number(u.id) === Number(id));
             if (!item) return;
 
             document.getElementById("userName").value = item.name ?? "";
@@ -765,7 +761,6 @@ if (commentForm) {
             return;
         }
 
-        normalizeItemData(result.data);
 
         await loadComments();
         if (commentForm) commentForm.reset();
@@ -790,8 +785,8 @@ if (commentsTableBody) {
         const target = e.target;
         if (!(target instanceof HTMLElement)) return;
 
-        const id = target.dataset.id;
-        if (!id) return;
+        const id = Number(target.dataset.id);
+        if (!Number.isInteger(id)) return;
 
         if (target.classList.contains("delete-comment-btn")) {
             const result = await deleteComment(id);
@@ -805,7 +800,7 @@ if (commentsTableBody) {
         }
 
         if (target.classList.contains("edit-comment-btn")) {
-            const item = state.comments.find((c) => c.id === id);
+            const item = state.comments.find((c) => Number(c.id) === Number(id));
             if (!item) return;
 
             document.getElementById("commentResourceId").value = item.resourceId ?? "";
@@ -852,8 +847,6 @@ if (ratingForm) {
             return;
         }
 
-        normalizeItemData(result.data);
-
         await loadRatings();
         if (ratingForm) ratingForm.reset();
         clearErrors();
@@ -877,8 +870,8 @@ if (ratingsTableBody) {
         const target = e.target;
         if (!(target instanceof HTMLElement)) return;
 
-        const id = target.dataset.id;
-        if (!id) return;
+        const id = Number(target.dataset.id);
+        if (!Number.isInteger(id)) return;
 
         if (target.classList.contains("delete-rating-btn")) {
             const result = await deleteRating(id);
@@ -892,7 +885,7 @@ if (ratingsTableBody) {
         }
 
         if (target.classList.contains("edit-rating-btn")) {
-            const item = state.ratings.find((r) => r.id === id);
+            const item = state.ratings.find((r) => Number(r.id) === Number(id));
             if (!item) return;
 
             document.getElementById("ratingResourceId").value = item.resourceId ?? "";

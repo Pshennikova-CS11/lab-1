@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import {
     CommentResponseDto,
     CreateCommentDto,
@@ -22,42 +21,36 @@ function normalizePageSize(value?: string): number {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 10;
 }
 
+function normalizeId(value: string): number {
+    const parsed = Number(value);
+
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new HttpError(400, "Invalid comment id");
+    }
+
+    return parsed;
+}
+
 export class CommentsService {
-    getAll(query: CommentListQuery): ApiListResponse<CommentResponseDto> {
+    async getAll(query: CommentListQuery): Promise<ApiListResponse<CommentResponseDto>> {
         const page = normalizePage(query.page);
         const pageSize = normalizePageSize(query.pageSize);
-        const includeDeleted = query.includeDeleted === "true";
 
-        let items = commentsRepository.findAll();
+        let items = await commentsRepository.findAll(query);
 
-        if (!includeDeleted) {
-            items = items.filter((item) => item.deletedAt === null);
-        }
+        items = items.filter((item) => item.deletedAt === null);
 
         if (query.resourceId) {
-            items = items.filter((item) => item.resourceId === query.resourceId);
+            items = items.filter((item) => item.resourceId === Number(query.resourceId));
         }
 
         if (query.userId) {
-            items = items.filter((item) => item.userId === query.userId);
+            items = items.filter((item) => item.userId === Number(query.userId));
         }
 
         if (query.search) {
             const search = query.search.toLowerCase();
             items = items.filter((item) => item.text.toLowerCase().includes(search));
-        }
-
-        if (query.sortBy) {
-            const sortDir = query.sortDir === "desc" ? -1 : 1;
-
-            items.sort((a, b) => {
-                const left = String(a[query.sortBy as keyof CommentEntity] ?? "").toLowerCase();
-                const right = String(b[query.sortBy as keyof CommentEntity] ?? "").toLowerCase();
-
-                if (left < right) return -1 * sortDir;
-                if (left > right) return 1 * sortDir;
-                return 0;
-            });
         }
 
         const total = items.length;
@@ -72,69 +65,65 @@ export class CommentsService {
         };
     }
 
-    getById(id: string): ApiItemResponse<CommentResponseDto> {
-        const comment = commentsRepository.findById(id);
+    async getById(id: string): Promise<ApiItemResponse<CommentResponseDto>> {
+        const commentId = normalizeId(id);
+        const comment = await commentsRepository.findById(commentId);
 
         if (!comment || comment.deletedAt !== null) {
             throw new HttpError(404, "Comment not found");
         }
 
-        return {
-            item: toCommentResponseDto(comment)
-        };
+        return { item: toCommentResponseDto(comment) };
     }
 
-    create(dto: CreateCommentDto): ApiItemResponse<CommentResponseDto> {
-        const resource = resourcesRepository.findById(dto.resourceId);
-        if (!resource || resource.deletedAt !== null) {
+    async create(dto: CreateCommentDto): Promise<ApiItemResponse<CommentResponseDto>> {
+        const resource = await resourcesRepository.findById(dto.resourceId);
+        if (!resource) {
             throw new HttpError(404, "Resource not found");
         }
 
-        const user = usersRepository.findById(dto.userId);
-        if (!user || user.deletedAt !== null) {
+        const user = await usersRepository.findById(dto.userId);
+        if (!user) {
             throw new HttpError(404, "User not found");
         }
 
         const now = new Date().toISOString();
 
-        const newComment: CommentEntity = {
-            id: uuidv4(),
-            resourceId: dto.resourceId,
-            userId: dto.userId,
+        const created = await commentsRepository.create({
+            resourceId: Number(dto.resourceId),
+            userId: Number(dto.userId),
             text: dto.text,
             createdAt: now,
             updatedAt: now,
             deletedAt: null
-        };
+        });
 
-        const created = commentsRepository.create(newComment);
-
-        return {
-            item: toCommentResponseDto(created)
-        };
+        return { item: toCommentResponseDto(created) };
     }
 
-    patch(id: string, dto: PatchCommentDto): ApiItemResponse<CommentResponseDto> {
-        const existing = commentsRepository.findById(id);
+    async patch(id: string, dto: PatchCommentDto): Promise<ApiItemResponse<CommentResponseDto>> {
+        const commentId = normalizeId(id);
+        const existing = await commentsRepository.findById(commentId);
 
         if (!existing || existing.deletedAt !== null) {
             throw new HttpError(404, "Comment not found");
         }
 
-        const nextResourceId = dto.resourceId ?? existing.resourceId;
-        const nextUserId = dto.userId ?? existing.userId;
-
-        const resource = resourcesRepository.findById(nextResourceId);
-        if (!resource || resource.deletedAt !== null) {
-            throw new HttpError(404, "Resource not found");
+        if (dto.resourceId !== undefined) {
+            const resource = await resourcesRepository.findById(dto.resourceId);
+            if (!resource) {
+                throw new HttpError(404, "Resource not found");
+            }
         }
 
-        const user = usersRepository.findById(nextUserId);
-        if (!user || user.deletedAt !== null) {
-            throw new HttpError(404, "User not found");
+        if (dto.userId !== undefined) {
+            const user = await usersRepository.findById(dto.userId);
+            if (!user) {
+                throw new HttpError(404, "User not found");
+            }
         }
 
-        const updated = commentsRepository.update(id, {
+        const updated = await commentsRepository.update(commentId, {
             ...dto,
             updatedAt: new Date().toISOString()
         });
@@ -143,19 +132,18 @@ export class CommentsService {
             throw new HttpError(404, "Comment not found");
         }
 
-        return {
-            item: toCommentResponseDto(updated)
-        };
+        return { item: toCommentResponseDto(updated) };
     }
 
-    softDelete(id: string): void {
-        const existing = commentsRepository.findById(id);
+    async softDelete(id: string): Promise<void> {
+        const commentId = normalizeId(id);
 
+        const existing = await commentsRepository.findById(commentId);
         if (!existing || existing.deletedAt !== null) {
             throw new HttpError(404, "Comment not found");
         }
 
-        const updated = commentsRepository.update(id, {
+        const updated = await commentsRepository.update(commentId, {
             deletedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });

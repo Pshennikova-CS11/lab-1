@@ -1,14 +1,18 @@
-/* тільки опис маршрутів API */
 const express = require("express");
-const controller = require("../controllers/users.controller");
-
 const router = express.Router();
 
-/* CRUD-маршрути для сутності Users */
-router.get("/", controller.getAll);
-router.get("/:id", controller.getById);
-router.post("/", controller.create);
-router.put("/:id", controller.update);
-router.delete("/:id", controller.remove);
+const {
+    getAll,
+    getById,
+    create,
+    update,
+    remove
+} = require("../controllers/users.controller");
+
+router.get("/", getAll);
+router.get("/:id", getById);
+router.post("/", create);
+router.put("/:id", update);
+router.delete("/:id", remove);
 
 module.exports = router;

@@ -1,13 +1,11 @@
 export interface ResourceEntity {
-    id: string;
+    id: number;
     title: string;
     url: string;
     type: string;
-    description: string;
+    description?: string;
     author: string;
     createdAt: string;
-    updatedAt: string;
-    deletedAt: string | null;
 }
 
 export interface ResourceListQuery {

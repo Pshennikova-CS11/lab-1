@@ -1,20 +1,13 @@
 import { Router } from "express";
-import {
-    createUser,
-    deleteUser,
-    getUserById,
-    getUsers,
-    patchUser
-} from "../controllers/users.controller";
-import { validateBody } from "../middleware/validate";
-import { validateCreateUser, validatePatchUser } from "../validators/users.validator";
+import { getUsers, getUserById, createUser, patchUser, deleteUser } from "../controllers/users.controller";
 
 const router = Router();
 
 router.get("/", getUsers);
 router.get("/:id", getUserById);
-router.post("/", validateBody(validateCreateUser), createUser);
-router.patch("/:id", validateBody(validatePatchUser), patchUser);
+router.post("/", createUser);
+router.patch("/:id", patchUser);
+router.put("/:id", patchUser);
 router.delete("/:id", deleteUser);
 
 export default router;

@@ -1,45 +1,44 @@
 const ratingsService = require("../services/ratings.service");
-const { toRatingResponseDto } = require("../dtos/ratings.dto");
 
-function getAll(req, res, next) {
+async function getAll(req, res, next) {
     try {
-        const ratings = ratingsService.getAllRatings();
-        res.status(200).json(ratings.map(toRatingResponseDto));
+        const ratings = await ratingsService.getAllRatings();
+        res.status(200).json(ratings);
     } catch (err) {
         next(err);
     }
 }
 
-function getById(req, res, next) {
+async function getById(req, res, next) {
     try {
-        const rating = ratingsService.getRatingById(req.params.id);
-        res.status(200).json(toRatingResponseDto(rating));
+        const rating = await ratingsService.getRatingById(req.params.id);
+        res.status(200).json(rating);
     } catch (err) {
         next(err);
     }
 }
 
-function create(req, res, next) {
+async function create(req, res, next) {
     try {
-        const rating = ratingsService.createRating(req.body);
-        res.status(201).json(toRatingResponseDto(rating));
+        const result = await ratingsService.addRating(req.body);
+        res.status(201).json(result);
     } catch (err) {
         next(err);
     }
 }
 
-function update(req, res, next) {
+async function update(req, res, next) {
     try {
-        const rating = ratingsService.updateRating(req.params.id, req.body);
-        res.status(200).json(toRatingResponseDto(rating));
+        const rating = await ratingsService.updateRating(req.params.id, req.body);
+        res.status(200).json(rating);
     } catch (err) {
         next(err);
     }
 }
 
-function remove(req, res, next) {
+async function remove(req, res, next) {
     try {
-        ratingsService.deleteRating(req.params.id);
+        await ratingsService.deleteRating(req.params.id);
         res.status(204).send();
     } catch (err) {
         next(err);

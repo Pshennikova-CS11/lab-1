@@ -1,8 +1,14 @@
-/* ЦЕНТРАЛІЗОВАНИЙ ERROR-HANDLER: формує єдиний формат помилки для всього API */
 function errorHandler(err, req, res, next) {
-    console.error(err);
-
     const status = err.status || 500;
+
+    console.error(
+        `[ERROR] ${req.method} ${req.originalUrl} -> ${status}`,
+        {
+            code: err.code || "INTERNAL_SERVER_ERROR",
+            message: err.message || "Unexpected error",
+            details: err.details || null
+        }
+    );
 
     const response = {
         error: {

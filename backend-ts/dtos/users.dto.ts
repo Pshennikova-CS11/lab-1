@@ -5,13 +5,14 @@ export interface CreateUserDto {
     email: string;
 }
 
-export interface PatchUserDto {
+// Змінюємо PatchUserDto на UpdateUserDto для синхронізації з сервісом
+export interface UpdateUserDto {
     name?: string;
     email?: string;
 }
 
 export interface UserResponseDto {
-    id: string;
+    id: number; // SQLite INTEGER = number
     name: string;
     email: string;
     createdAt: string;
@@ -20,7 +21,7 @@ export interface UserResponseDto {
 
 export function toUserResponseDto(user: UserEntity): UserResponseDto {
     return {
-        id: user.id,
+        id: Number(user.id),
         name: user.name,
         email: user.email,
         createdAt: user.createdAt,

@@ -1,14 +1,27 @@
-import { v4 as uuidv4 } from "uuid";
-import {
-    CreateUserDto,
-    PatchUserDto,
-    UserResponseDto,
-    toUserResponseDto
-} from "../dtos/users.dto";
 import { usersRepository } from "../repositories/users.repository";
-import { ApiItemResponse, ApiListResponse } from "../types/api";
-import { UserEntity, UserListQuery } from "../types/user";
 import { HttpError } from "../utils/http-error";
+
+type UserQuery = {
+    search?: string;
+    page?: string;
+    pageSize?: string;
+    includeDeleted?: string;
+};
+
+type UserInput = {
+    name: string;
+    email: string;
+};
+
+function normalizeId(id: string): number {
+    const parsed = Number(id);
+
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new HttpError(400, "Invalid user id");
+    }
+
+    return parsed;
+}
 
 function normalizePage(value?: string): number {
     const parsed = Number(value);
@@ -20,13 +33,13 @@ function normalizePageSize(value?: string): number {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 10;
 }
 
-export class UsersService {
-    getAll(query: UserListQuery): ApiListResponse<UserResponseDto> {
+export const usersService = {
+    getAll: async (query: UserQuery) => {
         const page = normalizePage(query.page);
         const pageSize = normalizePageSize(query.pageSize);
         const includeDeleted = query.includeDeleted === "true";
 
-        let items = usersRepository.findAll();
+        let items = await usersRepository.findAll();
 
         if (!includeDeleted) {
             items = items.filter((item) => item.deletedAt === null);
@@ -34,10 +47,9 @@ export class UsersService {
 
         if (query.search) {
             const search = query.search.toLowerCase();
-            items = items.filter(
-                (item) =>
-                    item.name.toLowerCase().includes(search) ||
-                    item.email.toLowerCase().includes(search)
+            items = items.filter((item) =>
+                item.name.toLowerCase().includes(search) ||
+                item.email.toLowerCase().includes(search)
             );
         }
 
@@ -46,67 +58,86 @@ export class UsersService {
         const pagedItems = items.slice(start, start + pageSize);
 
         return {
-            items: pagedItems.map(toUserResponseDto),
+            items: pagedItems,
             total,
             page,
             pageSize
         };
-    }
+    },
 
-    getById(id: string): ApiItemResponse<UserResponseDto> {
-        const user = usersRepository.findById(id);
+    getById: async (id: string) => {
+        const userId = normalizeId(id);
+        const user = await usersRepository.findById(userId);
 
         if (!user || user.deletedAt !== null) {
             throw new HttpError(404, "User not found");
         }
 
         return {
-            item: toUserResponseDto(user)
+            item: user
         };
-    }
+    },
 
-    create(dto: CreateUserDto): ApiItemResponse<UserResponseDto> {
-        const existing = usersRepository.findByEmail(dto.email);
+        create: async (data: UserInput) => {
+            try {
+                const normalizedEmail = data.email.trim().toLowerCase();
 
-        if (existing && existing.deletedAt === null) {
-            throw new HttpError(409, "User with this email already exists");
-        }
+                const existing = await usersRepository.findByEmail(normalizedEmail);
 
-        const now = new Date().toISOString();
+                if (existing && existing.deletedAt === null) {
+                    throw new HttpError(409, "User with this email already exists");
+                }
 
-        const newUser: UserEntity = {
-            id: uuidv4(),
-            name: dto.name,
-            email: dto.email,
-            createdAt: now,
-            updatedAt: now,
-            deletedAt: null
-        };
+                if (existing && existing.deletedAt !== null) {
+                    const restored = await usersRepository.update(existing.id, {
+                        name: data.name.trim(),
+                        email: normalizedEmail,
+                        deletedAt: null,
+                        updatedAt: new Date().toISOString()
+                    });
 
-        const created = usersRepository.create(newUser);
+                    return { item: restored };
+                }
 
-        return {
-            item: toUserResponseDto(created)
-        };
-    }
+                const now = new Date().toISOString();
 
-    patch(id: string, dto: PatchUserDto): ApiItemResponse<UserResponseDto> {
-        const existing = usersRepository.findById(id);
+                const created = await usersRepository.create({
+                    name: data.name.trim(),
+                    email: normalizedEmail,
+                    createdAt: now,
+                    updatedAt: now,
+                    deletedAt: null
+                });
+
+                return { item: created };
+            } catch (error) {
+                const message = String((error as Error).message || "");
+
+                if (message.includes("UNIQUE constraint failed")) {
+                    throw new HttpError(409, "User with this email already exists");
+                }
+
+                throw error;
+            }
+        },
+
+    patch: async (id: string, data: Partial<UserInput>) => {
+        const userId = normalizeId(id);
+        const existing = await usersRepository.findById(userId);
 
         if (!existing || existing.deletedAt !== null) {
             throw new HttpError(404, "User not found");
         }
 
-        if (dto.email && dto.email !== existing.email) {
-            const duplicate = usersRepository.findByEmail(dto.email);
+        const nextEmail = data.email ?? existing.email;
 
-            if (duplicate && duplicate.id !== id && duplicate.deletedAt === null) {
-                throw new HttpError(409, "User with this email already exists");
-            }
+        const duplicate = await usersRepository.findByEmail(nextEmail);
+        if (duplicate && duplicate.id !== userId && duplicate.deletedAt === null) {
+            throw new HttpError(409, "User with this email already exists");
         }
 
-        const updated = usersRepository.update(id, {
-            ...dto,
+        const updated = await usersRepository.update(userId, {
+            ...data,
             updatedAt: new Date().toISOString()
         });
 
@@ -115,18 +146,19 @@ export class UsersService {
         }
 
         return {
-            item: toUserResponseDto(updated)
+            item: updated
         };
-    }
+    },
 
-    softDelete(id: string): void {
-        const existing = usersRepository.findById(id);
+    softDelete: async (id: string) => {
+        const userId = normalizeId(id);
+        const existing = await usersRepository.findById(userId);
 
         if (!existing || existing.deletedAt !== null) {
             throw new HttpError(404, "User not found");
         }
 
-        const updated = usersRepository.update(id, {
+        const updated = await usersRepository.update(userId, {
             deletedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
@@ -135,6 +167,4 @@ export class UsersService {
             throw new HttpError(404, "User not found");
         }
     }
-}
-
-export const usersService = new UsersService();
+};

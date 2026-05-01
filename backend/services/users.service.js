@@ -1,17 +1,35 @@
-/* валідація, створення, пошук, оновлення, видалення */
-const { v4: uuidv4 } = require("uuid");
+const usersRepository = require("../repositories/users.repository");
 const { validateUser } = require("../validators/users.validator");
 
-let users = [];
-
-function getAllUsers() {
-    return users;
+function escapeSqlString(value) {
+    return String(value).replace(/'/g, "''");
 }
 
-function getUserById(id) {
-    const user = users.find(u => u.id === id);
+function normalizeUserId(id) {
+    const userId = Number(id);
 
-    /* 404 Not Found: якщо користувача за таким id не існує */
+    if (!Number.isInteger(userId) || userId <= 0) {
+        throw {
+            code: "VALIDATION_ERROR",
+            message: "Invalid user id",
+            status: 400
+        };
+    }
+
+    return userId;
+}
+
+// 🔹 GET ALL
+async function getAllUsers() {
+    return await usersRepository.findAllUsers();
+}
+
+// 🔹 GET BY ID
+async function getUserById(id) {
+    const userId = normalizeUserId(id);
+
+    const user = await usersRepository.findUserById(userId);
+
     if (!user) {
         throw {
             code: "NOT_FOUND",
@@ -23,10 +41,10 @@ function getUserById(id) {
     return user;
 }
 
-function createUser(data) {
+// 🔹 CREATE
+async function createUser(data) {
     const errors = validateUser(data);
 
-    /* 400 Bad Request: серверна валідація некоректних вхідних даних */
     if (errors.length) {
         throw {
             code: "VALIDATION_ERROR",
@@ -36,42 +54,34 @@ function createUser(data) {
         };
     }
 
+    const normalizedName = data.name.trim();
     const normalizedEmail = data.email.trim().toLowerCase();
 
-    const existingUser = users.find(
-        u => u.email.toLowerCase() === normalizedEmail
-    );
+    const safeName = escapeSqlString(normalizedName);
+    const safeEmail = escapeSqlString(normalizedEmail);
+    const now = new Date().toISOString();
 
-    /* 400 Bad Request: серверна валідація некоректних вхідних даних */
-    if (existingUser) {
-        throw {
-            code: "CONFLICT",
-            message: "User with this email already exists",
-            status: 409
-        };
+    try {
+        const result = await usersRepository.insertUser(safeName, safeEmail, now);
+        return await getUserById(result.lastID);
+    } catch (err) {
+        if (String(err.message).includes("UNIQUE constraint failed")) {
+            throw {
+                code: "CONFLICT",
+                message: "User with this email already exists",
+                status: 409
+            };
+        }
+
+        throw err;
     }
-
-    const user = {
-        id: uuidv4(),
-        name: data.name.trim(),
-        email: normalizedEmail
-    };
-
-    users.push(user);
-
-    return user;
 }
 
-function updateUser(id, data) {
-    const user = users.find(u => u.id === id);
+// 🔹 UPDATE
+async function updateUser(id, data) {
+    const userId = normalizeUserId(id);
 
-    if (!user) {
-        throw {
-            code: "NOT_FOUND",
-            message: "User not found",
-            status: 404
-        };
-    }
+    await getUserById(userId);
 
     const errors = validateUser(data);
 
@@ -84,38 +94,50 @@ function updateUser(id, data) {
         };
     }
 
+    const normalizedName = data.name.trim();
     const normalizedEmail = data.email.trim().toLowerCase();
 
-    const duplicateUser = users.find(
-        u => u.email.toLowerCase() === normalizedEmail && u.id !== id
-    );
+    const safeName = escapeSqlString(normalizedName);
+    const safeEmail = escapeSqlString(normalizedEmail);
 
-    if (duplicateUser) {
-        throw {
-            code: "CONFLICT",
-            message: "User with this email already exists",
-            status: 409
-        };
+    try {
+        const result = await usersRepository.updateUserById(userId, safeName, safeEmail);
+
+        if (result.changes === 0) {
+            throw {
+                code: "NOT_FOUND",
+                message: "User not found",
+                status: 404
+            };
+        }
+
+        return await getUserById(userId);
+    } catch (err) {
+        if (String(err.message).includes("UNIQUE constraint failed")) {
+            throw {
+                code: "CONFLICT",
+                message: "User with this email already exists",
+                status: 409
+            };
+        }
+
+        throw err;
     }
-
-    user.name = data.name.trim();
-    user.email = normalizedEmail;
-
-    return user;
 }
 
-function deleteUser(id) {
-    const exists = users.some(u => u.id === id);
+// 🔹 DELETE
+async function deleteUser(id) {
+    const userId = normalizeUserId(id);
 
-    if (!exists) {
+    const result = await usersRepository.deleteUserById(userId);
+
+    if (result.changes === 0) {
         throw {
             code: "NOT_FOUND",
             message: "User not found",
             status: 404
         };
     }
-
-    users = users.filter(u => u.id !== id);
 }
 
 module.exports = {

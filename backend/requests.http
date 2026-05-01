@@ -212,3 +212,35 @@ GET http://localhost:3000/api/resources?sortBy=createdAt&order=desc
 
 ### Сортування ресурсів за датою створення (від старих до нових)
 GET http://localhost:3000/api/resources?sortBy=createdAt&order=asc
+
+###
+GET http://localhost:3000/api/users/999999
+
+###
+POST http://localhost:3000/api/users
+Content-Type: application/json
+
+{
+  "name": "A",
+  "email": "dup@example.com"
+}
+
+###
+POST http://localhost:3000/api/ratings
+Content-Type: application/json
+
+{
+"resourceId": 1,
+"userId": 1,
+"value": 10
+}
+
+###
+POST http://localhost:3000/api/ratings
+Content-Type: application/json
+
+{
+"resourceId": 3,
+"userId": 3,
+"value": 1
+}

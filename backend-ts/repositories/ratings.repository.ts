@@ -1,41 +1,77 @@
 import { RatingEntity } from "../types/rating";
+import { all, get, run } from "../db/dbClient";
+
+type CreateRatingInput = Omit<RatingEntity, "id">;
 
 class RatingsRepository {
-    private items: RatingEntity[] = [];
+    async findAll(query: { page?: number; pageSize?: number } = {}): Promise<RatingEntity[]> {
+        const limit = Number(query.pageSize) || 100;
+        const offset = ((Number(query.page) || 1) - 1) * limit;
 
-    findAll(): RatingEntity[] {
-        return [...this.items];
+        return await all<RatingEntity>(`
+            SELECT id, resourceId, userId, value, createdAt, updatedAt, deletedAt
+            FROM Ratings
+            ORDER BY createdAt DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `);
     }
 
-    findById(id: string): RatingEntity | undefined {
-        return this.items.find((item) => item.id === id);
+    async findById(id: number): Promise<RatingEntity | undefined> {
+        return await get<RatingEntity>(`
+            SELECT id, resourceId, userId, value, createdAt, updatedAt, deletedAt
+            FROM Ratings
+            WHERE id = ${id}
+        `);
     }
 
-    findByUserAndResource(userId: string, resourceId: string): RatingEntity | undefined {
-        return this.items.find(
-            (item) => item.userId === userId && item.resourceId === resourceId
-        );
+    async findByUserAndResource(userId: number, resourceId: number): Promise<RatingEntity | undefined> {
+        return await get<RatingEntity>(`
+            SELECT id, resourceId, userId, value, createdAt, updatedAt, deletedAt
+            FROM Ratings
+            WHERE userId = ${userId} AND resourceId = ${resourceId}
+        `);
     }
 
-    create(rating: RatingEntity): RatingEntity {
-        this.items.push(rating);
-        return rating;
+    async create(rating: CreateRatingInput): Promise<RatingEntity> {
+        const result = await run(`
+            INSERT INTO Ratings (resourceId, userId, value, createdAt, updatedAt, deletedAt)
+            VALUES (
+                ${rating.resourceId},
+                ${rating.userId},
+                ${rating.value},
+                '${rating.createdAt}',
+                '${rating.updatedAt}',
+                NULL
+            )
+        `);
+
+        return (await this.findById(result.lastID))!;
     }
 
-    update(id: string, changes: Partial<RatingEntity>): RatingEntity | null {
-        const index = this.items.findIndex((item) => item.id === id);
+    async update(id: number, changes: Partial<RatingEntity>): Promise<RatingEntity | null> {
+        const existing = await this.findById(id);
 
-        if (index === -1) {
+        if (!existing) {
             return null;
         }
 
-        const updated = {
-            ...this.items[index],
-            ...changes
-        };
+        const resourceId = changes.resourceId ?? existing.resourceId;
+        const userId = changes.userId ?? existing.userId;
+        const value = changes.value ?? existing.value;
+        const updatedAt = changes.updatedAt ?? existing.updatedAt;
+        const deletedAt = changes.deletedAt ?? existing.deletedAt;
 
-        this.items[index] = updated;
-        return updated;
+        await run(`
+            UPDATE Ratings
+            SET resourceId = ${resourceId},
+                userId = ${userId},
+                value = ${value},
+                updatedAt = '${updatedAt}',
+                deletedAt = ${deletedAt ? `'${deletedAt}'` : "NULL"}
+            WHERE id = ${id}
+        `);
+
+        return await this.findById(id) || null;
     }
 }
 

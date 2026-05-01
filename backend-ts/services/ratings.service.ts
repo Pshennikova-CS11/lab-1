@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import {
     CreateRatingDto,
     PatchRatingDto,
@@ -9,7 +8,7 @@ import { ratingsRepository } from "../repositories/ratings.repository";
 import { resourcesRepository } from "../repositories/resources.repository";
 import { usersRepository } from "../repositories/users.repository";
 import { ApiItemResponse, ApiListResponse } from "../types/api";
-import { RatingEntity, RatingListQuery } from "../types/rating";
+import { RatingListQuery } from "../types/rating";
 import { HttpError } from "../utils/http-error";
 
 function normalizePage(value?: string): number {
@@ -22,44 +21,35 @@ function normalizePageSize(value?: string): number {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 10;
 }
 
+function normalizeId(value: string): number {
+    const parsed = Number(value);
+
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new HttpError(400, "Invalid rating id");
+    }
+
+    return parsed;
+}
+
 export class RatingsService {
-    getAll(query: RatingListQuery): ApiListResponse<RatingResponseDto> {
+    async getAll(query: RatingListQuery): Promise<ApiListResponse<RatingResponseDto>> {
         const page = normalizePage(query.page);
         const pageSize = normalizePageSize(query.pageSize);
-        const includeDeleted = query.includeDeleted === "true";
 
-        let items = ratingsRepository.findAll();
+        let items = await ratingsRepository.findAll(query);
 
-        if (!includeDeleted) {
-            items = items.filter((item) => item.deletedAt === null);
-        }
+        items = items.filter((item) => item.deletedAt === null);
 
         if (query.resourceId) {
-            items = items.filter((item) => item.resourceId === query.resourceId);
+            items = items.filter((item) => item.resourceId === Number(query.resourceId));
         }
 
         if (query.userId) {
-            items = items.filter((item) => item.userId === query.userId);
+            items = items.filter((item) => item.userId === Number(query.userId));
         }
 
         if (query.value) {
-            const value = Number(query.value);
-            if (Number.isInteger(value)) {
-                items = items.filter((item) => item.value === value);
-            }
-        }
-
-        if (query.sortBy) {
-            const sortDir = query.sortDir === "desc" ? -1 : 1;
-
-            items.sort((a, b) => {
-                const left = String(a[query.sortBy as keyof RatingEntity] ?? "").toLowerCase();
-                const right = String(b[query.sortBy as keyof RatingEntity] ?? "").toLowerCase();
-
-                if (left < right) return -1 * sortDir;
-                if (left > right) return 1 * sortDir;
-                return 0;
-            });
+            items = items.filter((item) => item.value === Number(query.value));
         }
 
         const total = items.length;
@@ -74,55 +64,50 @@ export class RatingsService {
         };
     }
 
-    getById(id: string): ApiItemResponse<RatingResponseDto> {
-        const rating = ratingsRepository.findById(id);
+    async getById(id: string): Promise<ApiItemResponse<RatingResponseDto>> {
+        const ratingId = normalizeId(id);
+        const rating = await ratingsRepository.findById(ratingId);
 
         if (!rating || rating.deletedAt !== null) {
             throw new HttpError(404, "Rating not found");
         }
 
-        return {
-            item: toRatingResponseDto(rating)
-        };
+        return { item: toRatingResponseDto(rating) };
     }
 
-    create(dto: CreateRatingDto): ApiItemResponse<RatingResponseDto> {
-        const resource = resourcesRepository.findById(dto.resourceId);
-        if (!resource || resource.deletedAt !== null) {
+    async create(dto: CreateRatingDto): Promise<ApiItemResponse<RatingResponseDto>> {
+        const resource = await resourcesRepository.findById(dto.resourceId);
+        if (!resource) {
             throw new HttpError(404, "Resource not found");
         }
 
-        const user = usersRepository.findById(dto.userId);
-        if (!user || user.deletedAt !== null) {
+        const user = await usersRepository.findById(dto.userId);
+        if (!user) {
             throw new HttpError(404, "User not found");
         }
 
-        const duplicate = ratingsRepository.findByUserAndResource(dto.userId, dto.resourceId);
+        const duplicate = await ratingsRepository.findByUserAndResource(dto.userId, dto.resourceId);
         if (duplicate && duplicate.deletedAt === null) {
             throw new HttpError(409, "Rating from this user for this resource already exists");
         }
 
         const now = new Date().toISOString();
 
-        const newRating: RatingEntity = {
-            id: uuidv4(),
-            resourceId: dto.resourceId,
-            userId: dto.userId,
+        const created = await ratingsRepository.create({
+            resourceId: Number(dto.resourceId),
+            userId: Number(dto.userId),
             value: dto.value,
             createdAt: now,
             updatedAt: now,
             deletedAt: null
-        };
+        });
 
-        const created = ratingsRepository.create(newRating);
-
-        return {
-            item: toRatingResponseDto(created)
-        };
+        return { item: toRatingResponseDto(created) };
     }
 
-    patch(id: string, dto: PatchRatingDto): ApiItemResponse<RatingResponseDto> {
-        const existing = ratingsRepository.findById(id);
+    async patch(id: string, dto: PatchRatingDto): Promise<ApiItemResponse<RatingResponseDto>> {
+        const ratingId = normalizeId(id);
+        const existing = await ratingsRepository.findById(ratingId);
 
         if (!existing || existing.deletedAt !== null) {
             throw new HttpError(404, "Rating not found");
@@ -131,22 +116,22 @@ export class RatingsService {
         const nextResourceId = dto.resourceId ?? existing.resourceId;
         const nextUserId = dto.userId ?? existing.userId;
 
-        const resource = resourcesRepository.findById(nextResourceId);
-        if (!resource || resource.deletedAt !== null) {
+        const resource = await resourcesRepository.findById(nextResourceId);
+        if (!resource) {
             throw new HttpError(404, "Resource not found");
         }
 
-        const user = usersRepository.findById(nextUserId);
-        if (!user || user.deletedAt !== null) {
+        const user = await usersRepository.findById(nextUserId);
+        if (!user) {
             throw new HttpError(404, "User not found");
         }
 
-        const duplicate = ratingsRepository.findByUserAndResource(nextUserId, nextResourceId);
-        if (duplicate && duplicate.id !== id && duplicate.deletedAt === null) {
+        const duplicate = await ratingsRepository.findByUserAndResource(nextUserId, nextResourceId);
+        if (duplicate && duplicate.id !== ratingId && duplicate.deletedAt === null) {
             throw new HttpError(409, "Rating from this user for this resource already exists");
         }
 
-        const updated = ratingsRepository.update(id, {
+        const updated = await ratingsRepository.update(ratingId, {
             ...dto,
             updatedAt: new Date().toISOString()
         });
@@ -155,19 +140,18 @@ export class RatingsService {
             throw new HttpError(404, "Rating not found");
         }
 
-        return {
-            item: toRatingResponseDto(updated)
-        };
+        return { item: toRatingResponseDto(updated) };
     }
 
-    softDelete(id: string): void {
-        const existing = ratingsRepository.findById(id);
+    async softDelete(id: string): Promise<void> {
+        const ratingId = normalizeId(id);
 
+        const existing = await ratingsRepository.findById(ratingId);
         if (!existing || existing.deletedAt !== null) {
             throw new HttpError(404, "Rating not found");
         }
 
-        const updated = ratingsRepository.update(id, {
+        const updated = await ratingsRepository.update(ratingId, {
             deletedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
