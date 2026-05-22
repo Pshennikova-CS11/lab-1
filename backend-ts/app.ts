@@ -12,17 +12,40 @@ import { logger } from "./middleware/logger";
 
 export const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+];
+
+const corsOptions: cors.CorsOptions = {
+    origin: (origin, callback) => {
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error("CORS: origin is not allowed"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(logger);
 
-app.use("/api/resources", resourcesRoutes);
-app.use("/api/users", usersRoutes);
-app.use("/api/comments", commentsRoutes);
-app.use("/api/ratings", ratingsRoutes);
+app.use("/api/v1/resources", resourcesRoutes);
+app.use("/api/v1/users", usersRoutes);
+app.use("/api/v1/comments", commentsRoutes);
+app.use("/api/v1/ratings", ratingsRoutes);
 
-app.get("/api/health", (req, res) => {
-    res.status(200).json({ message: "API is running" });
+app.get("/api/v1/health", (req, res) => {
+    res.status(200).json({ status: "ok" });
 });
 
 const publicPath = path.resolve("public");

@@ -37,10 +37,31 @@ async function updateUserById(userId, name, email) {
 
 // 🔹 видалити користувача
 async function deleteUserById(userId) {
-    return await run(`
-        DELETE FROM Users
-        WHERE id = ${userId};
-    `);
+    try {
+        await run(`BEGIN TRANSACTION;`);
+
+        await run(`
+            DELETE FROM Ratings
+            WHERE userId = ${userId};
+        `);
+
+        await run(`
+            DELETE FROM Comments
+            WHERE userId = ${userId};
+        `);
+
+        const result = await run(`
+            DELETE FROM Users
+            WHERE id = ${userId};
+        `);
+
+        await run(`COMMIT;`);
+
+        return result;
+    } catch (error) {
+        await run(`ROLLBACK;`);
+        throw error;
+    }
 }
 
 module.exports = {

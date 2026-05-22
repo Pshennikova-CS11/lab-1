@@ -1,9 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="styles.css" />
-    <script src="app.js" defer></script>
+    <script>
+        const appVersion = Date.now();
+        document.write(`<link rel="stylesheet" href="./styles.css?v=${appVersion}">`);
+    </script>
     <title>Каталог навчальних ресурсів з рейтингом</title>
 </head>
 <body>
@@ -50,6 +52,8 @@
 
         <section class="list-section">
             <h2>Список ресурсів</h2>
+
+            <div id="resourcesStatus" class="status"></div>
 
             <input type="text" id="searchInput" placeholder="Пошук за назвою">
 
@@ -107,6 +111,8 @@
         <section class="list-section">
             <h2>Список користувачів</h2>
 
+            <div id="usersStatus" class="status"></div>
+
             <table>
                 <thead>
                 <tr>
@@ -148,6 +154,8 @@
 
         <section class="list-section">
             <h2>Список коментарів</h2>
+
+            <div id="commentsStatus" class="status"></div>
 
             <table>
                 <thead>
@@ -198,6 +206,8 @@
         <section class="list-section">
             <h2>Список рейтингів</h2>
 
+            <div id="ratingsStatus" class="status"></div>
+
             <table>
                 <thead>
                 <tr>
@@ -214,6 +224,39 @@
     </div>
 
 </div>
+
+<div id="confirmModal" class="confirm-modal hidden">
+    <div class="confirm-box">
+        <h3 id="confirmModalTitle">Підтвердження дії</h3>
+        <p id="confirmModalText"></p>
+
+        <div class="confirm-actions">
+            <button type="button" id="confirmOkBtn">Так, видалити</button>
+            <button type="button" id="confirmCancelBtn">Скасувати</button>
+        </div>
+    </div>
+</div>
+
+<div id="errorModal" class="error-modal hidden">
+    <div class="error-box">
+        <h3>Помилка</h3>
+        <p id="errorModalText"></p>
+
+        <div class="error-actions">
+            <button type="button" id="errorOkBtn">ОК</button>
+        </div>
+    </div>
+</div>
+
+<div id="undoToast" class="undo-toast hidden">
+    <span id="undoToastText"></span>
+    <button type="button" id="undoToastBtn">Скасувати</button>
+</div>
+
+<script>
+    document.write(`<script src="./apiClient.js?v=${appVersion}"><\/script>`);
+    document.write(`<script src="./app.js?v=${appVersion}"><\/script>`);
+</script>
 
 </body>
 </html>

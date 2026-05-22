@@ -1,3 +1,5 @@
+const { resourcesApi, usersApi, commentsApi, ratingsApi } = window;
+
 const state = {
     resources: [],
     users: [],
@@ -33,11 +35,13 @@ const ratingForm = document.getElementById("ratingForm");
 const ratingsTableBody = document.getElementById("ratingsTableBody");
 const ratingResetBtn = document.getElementById("ratingResetBtn");
 
-/* API URLS */
-const RESOURCES_API_URL = "/api/resources";
-const USERS_API_URL = "/api/users";
-const COMMENTS_API_URL = "/api/comments";
-const RATINGS_API_URL = "/api/ratings";
+/* API URLS */ /*Взаємодія лише через API*/
+/*const API_BASE_URL = "http://localhost:3000/api/v1";*/
+
+/*const RESOURCES_API_URL = `${API_BASE_URL}/resources`;*/
+/*const USERS_API_URL = `${API_BASE_URL}/users`;*/
+/*const COMMENTS_API_URL = `${API_BASE_URL}/comments`;*/
+/*const RATINGS_API_URL = `${API_BASE_URL}/ratings`;*/
 
 /* COMMON HELPERS */
 function isValidURL(url) {
@@ -65,14 +69,298 @@ function clearErrors() {
         .forEach(el => el.textContent = "");
 }
 
+function setStatus(elementId, text, type = "") {
+    const el = document.getElementById(elementId); /*знаходимо HTML-елемент за переданим id*/
+
+    if (!el) return;  /*якщо такого елемента немає на сторінці, функція просто завершується*/
+
+    el.textContent = text; /*записуємо в цей елемент текст повідомлення*/
+    el.className = type ? `status ${type}` : "status"; /*додаємо CSS-клас відповідно до типу стану*/
+}
+
+function clearStatus(elementId) {
+    const el = document.getElementById(elementId);
+
+    if (!el) return;
+
+    el.textContent = "";
+    el.className = "status";
+}
+
+function showConfirm(message, options = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById("confirmModal");
+        const modalTitle = document.getElementById("confirmModalTitle");
+        const modalText = document.getElementById("confirmModalText");
+        const okBtn = document.getElementById("confirmOkBtn");
+        const cancelBtn = document.getElementById("confirmCancelBtn");
+
+        if (!modal || !modalTitle || !modalText || !okBtn || !cancelBtn) {
+            console.error("confirmModal elements not found");
+            resolve(false);
+            return;
+        }
+
+        modalTitle.textContent = options.title || "Підтвердження дії";
+        modalText.textContent = message;
+        okBtn.textContent = options.okText || "Так, видалити";
+        cancelBtn.textContent = options.cancelText || "Скасувати";
+
+        modal.classList.remove("hidden");
+        modal.style.display = "flex";
+
+        function close(result) {
+            modal.classList.add("hidden");
+            modal.style.display = "none";
+
+            okBtn.removeEventListener("click", onOk);
+            cancelBtn.removeEventListener("click", onCancel);
+
+            resolve(result);
+        }
+
+        function onOk() {
+            close(true);
+        }
+
+        function onCancel() {
+            close(false);
+        }
+
+        okBtn.addEventListener("click", onOk);
+        cancelBtn.addEventListener("click", onCancel);
+    });
+}
+
+function showErrorModal(message) {
+    const modal = document.getElementById("errorModal");
+    const modalText = document.getElementById("errorModalText");
+    const okBtn = document.getElementById("errorOkBtn");
+
+    if (!modal || !modalText || !okBtn) {
+        console.error(message);
+        return;
+    }
+
+    modalText.textContent = message;
+    modal.classList.remove("hidden");
+    modal.style.display = "flex";
+
+    function close() {
+        modal.classList.add("hidden");
+        modal.style.display = "none";
+        okBtn.removeEventListener("click", close);
+    }
+
+    okBtn.addEventListener("click", close);
+}
+
+const DELETE_DELAY_SECONDS = 10;
+
+let undoTimerId = null;
+let undoIntervalId = null;
+let undoCancelHandler = null;
+
+function scheduleDelete({ message, button, deleteAction, afterDelete }) {
+    const toast = document.getElementById("undoToast");
+    const toastText = document.getElementById("undoToastText");
+    const toastBtn = document.getElementById("undoToastBtn");
+
+    if (!toast || !toastText || !toastBtn) return;
+
+    if (undoTimerId) {
+        clearTimeout(undoTimerId);
+        undoTimerId = null;
+    }
+
+    if (undoIntervalId) {
+        clearInterval(undoIntervalId);
+        undoIntervalId = null;
+    }
+
+    if (undoCancelHandler) {
+        toastBtn.removeEventListener("click", undoCancelHandler);
+        undoCancelHandler = null;
+    }
+
+    let secondsLeft = DELETE_DELAY_SECONDS;
+
+    function updateToastText() {
+        toastText.textContent = `${message} через ${secondsLeft} с.`;
+    }
+
+    button.disabled = true;
+    updateToastText();
+
+    toast.classList.remove("hidden");
+    toast.style.display = "flex";
+
+    undoCancelHandler = () => {
+        if (undoTimerId) {
+            clearTimeout(undoTimerId);
+            undoTimerId = null;
+        }
+
+        if (undoIntervalId) {
+            clearInterval(undoIntervalId);
+            undoIntervalId = null;
+        }
+
+        button.disabled = false;
+
+        toast.classList.add("hidden");
+        toast.style.display = "none";
+
+        toastBtn.removeEventListener("click", undoCancelHandler);
+        undoCancelHandler = null;
+    };
+
+    toastBtn.addEventListener("click", undoCancelHandler);
+
+    undoIntervalId = setInterval(() => {
+        secondsLeft -= 1;
+
+        if (secondsLeft > 0) {
+            updateToastText();
+        }
+    }, 1000);
+
+    undoTimerId = setTimeout(async () => {
+        if (undoIntervalId) {
+            clearInterval(undoIntervalId);
+            undoIntervalId = null;
+        }
+
+        toast.classList.add("hidden");
+        toast.style.display = "none";
+
+        toastBtn.removeEventListener("click", undoCancelHandler);
+        undoCancelHandler = null;
+        undoTimerId = null;
+
+        const result = await deleteAction();
+
+        if (!result.ok) {
+            button.disabled = false;
+
+            const message = getApiErrorMessage(result, "Помилка");
+            showErrorModal(message);
+            console.error("API error:", result.error);
+            return;
+        }
+
+        await afterDelete();
+    }, DELETE_DELAY_SECONDS * 1000);
+}
+
+function translateErrorDetail(detail) {
+    const translations = {
+        // Resources
+        "title is required": "Назва обов'язкова",
+        "title must be a string": "Назва має бути текстом",
+        "title must be between 3 and 100 characters": "Назва має містити від 3 до 100 символів",
+
+        "url is required": "URL обов'язковий",
+        "url must be a string": "URL має бути текстом",
+        "url must be valid": "URL має бути коректним",
+
+        "type is required": "Тип ресурсу обов'язковий",
+        "type must be one of article, video, course": "Тип має бути одним із варіантів: article, video, course",
+
+        "author is required": "Автор обов'язковий",
+        "author must be a string": "Автор має бути текстом",
+        "author must be between 2 and 50 characters": "Автор має містити від 2 до 50 символів",
+
+        "description is required": "Опис обов'язковий",
+        "description must be a string": "Опис має бути текстом",
+        "description must be between 5 and 500 characters": "Опис має містити від 5 до 500 символів",
+
+        // Users
+        "name is required": "Ім’я користувача обов'язкове",
+        "name must be a string": "Ім’я має бути текстом",
+        "name must be between 2 and 50 characters": "Ім’я має містити від 2 до 50 символів",
+
+        "email is required": "Email обов'язковий",
+        "email must be a string": "Email має бути текстом",
+        "email must be valid": "Email має бути коректним",
+
+        // Comments
+        "resourceId is required": "Ресурс обов'язковий",
+        "resourceId must be a number": "Ідентифікатор ресурсу має бути числом",
+        "resourceId must be a positive integer": "Ідентифікатор ресурсу має бути додатним цілим числом",
+
+        "userId is required": "Користувач обов'язковий",
+        "userId must be a number": "Ідентифікатор користувача має бути числом",
+        "userId must be a positive integer": "Ідентифікатор користувача має бути додатним цілим числом",
+
+        "text is required": "Текст коментаря обов'язковий",
+        "text must be a string": "Коментар має бути текстом",
+        "text must be between 2 and 500 characters": "Коментар має містити від 2 до 500 символів",
+
+        // Ratings
+        "value is required": "Оцінка обов'язкова",
+        "value must be a number": "Оцінка має бути числом",
+        "value must be between 1 and 5": "Оцінка має бути від 1 до 5"
+    };
+
+    return translations[detail] || detail;
+}
+
+function translateErrorMessage(message) {
+    const translations = {
+        "Invalid request body": "Помилка валідації",
+        "User with this email already exists": "Користувач із таким email уже існує",
+        "Resource with this URL already exists": "Ресурс із таким URL уже існує",
+        "Resource not found": "Ресурс не знайдено",
+        "User not found": "Користувача не знайдено",
+        "Comment not found": "Коментар не знайдено",
+        "Rating not found": "Рейтинг не знайдено",
+        "Test server error": "Тестова помилка сервера"
+    };
+
+    return translations[message] || message;
+}
+
+function getApiErrorMessage(result, fallback = "Помилка") {
+    const error = result?.error;
+
+    if (!error) {
+        return fallback;
+    }
+
+    const backendError = error.details?.error;
+
+    if (Array.isArray(backendError?.details)) {
+        return backendError.details
+            .map(translateErrorDetail)
+            .join("\n");
+    }
+
+    if (Array.isArray(error.details)) {
+        return error.details
+            .map(translateErrorDetail)
+            .join("\n");
+    }
+
+    return translateErrorMessage(
+        backendError?.message || error.message || fallback
+    );
+}
+
 function getResourceTitle(resourceId) {
     const resource = state.resources.find(r => Number(r.id) === Number(resourceId));
-    return resource ? resource.title : resourceId;
+
+    return resource
+        ? resource.title
+        : `Ресурс видалено (id: ${resourceId})`;
 }
 
 function getUserName(userId) {
     const user = state.users.find(u => Number(u.id) === Number(userId));
-    return user ? user.name : userId;
+
+    return user
+        ? user.name
+        : `Користувача видалено (id: ${userId})`;
 }
 
 function renderSelectOptions() {
@@ -97,22 +385,51 @@ function renderSelectOptions() {
     if (ratingUserId) ratingUserId.innerHTML = userOptions;
 }
 
-async function fetchJson(url, options = {}) {
-    const response = await fetch(url, options);
+/* async function fetchJson(url, options = {}) {
+    let response;
+
+    try {
+        response = await fetch(url, options);
+    } catch (error) {
+        return {
+            ok: false,
+            error: {
+                status: 0,
+                message: "Помилка мережі або CORS",
+                details: error.message
+            }
+        };
+    }
 
     if (response.status === 204) {
         return { ok: true, data: null };
     }
 
-    const data = await response.json();
+    const text = await response.text();
+
+    let data = null;
+
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch {
+        data = text;
+    }
 
     if (!response.ok) {
-        console.error("Server error:", JSON.stringify(data, null, 2));
-        return { ok: false, error: data };
+        console.error("Server error:", data);
+
+        return {
+            ok: false,
+            error: {
+                status: response.status,
+                message: data?.error?.message || data?.message || "HTTP помилка",
+                details: data
+            }
+        };
     }
 
     return { ok: true, data };
-}
+}*/
 
 /* RESOURCE FORM */
 function readForm() {
@@ -252,37 +569,109 @@ function validateRatingForm(data) {
 
 /* LOAD DATA */
 async function loadResources() {
-    const result = await fetchJson(RESOURCES_API_URL);
-    if (result.ok) {
-        state.resources = result.data;
-        render();
-        renderSelectOptions();
+    setStatus("resourcesStatus", "Завантаження...", "loading");
+    tbody.innerHTML = "";
+
+    /*const result = await fetchJson(RESOURCES_API_URL);*/
+    const result = await resourcesApi.getList();
+
+    if (!result.ok) {
+        state.resources = [];
+        tbody.innerHTML = "";
+        setStatus("resourcesStatus", result.error?.message || "Помилка завантаження ресурсів", "error");
+        return;
     }
+
+    state.resources = result.data || [];
+
+    if (state.resources.length === 0) {
+        render();
+        setStatus("resourcesStatus", "Немає даних", "empty");
+        return;
+    }
+
+    render();
+    renderSelectOptions();
+    clearStatus("resourcesStatus");
 }
 
 async function loadUsers() {
-    const result = await fetchJson(USERS_API_URL);
-    if (result.ok) {
-        state.users = result.data;
-        renderUsers();
-        renderSelectOptions();
+    setStatus("usersStatus", "Завантаження...", "loading");
+    usersTableBody.innerHTML = "";
+
+    /*const result = await fetchJson(USERS_API_URL);*/
+    const result = await usersApi.getList();
+
+    if (!result.ok) {
+        state.users = [];
+        usersTableBody.innerHTML = "";
+        setStatus("usersStatus", result.error?.message || "Помилка завантаження користувачів", "error");
+        return;
     }
+
+    state.users = result.data || [];
+
+    if (state.users.length === 0) {
+        renderUsers();
+        setStatus("usersStatus", "Немає даних", "empty");
+        return;
+    }
+
+    renderUsers();
+    renderSelectOptions();
+    clearStatus("usersStatus");
 }
 
 async function loadComments() {
-    const result = await fetchJson(COMMENTS_API_URL);
-    if (result.ok) {
-        state.comments = result.data;
-        renderComments();
+    setStatus("commentsStatus", "Завантаження...", "loading");
+    commentsTableBody.innerHTML = "";
+
+    /* const result = await fetchJson(COMMENTS_API_URL); */
+    const result = await commentsApi.getList();
+
+    if (!result.ok) {
+        state.comments = [];
+        commentsTableBody.innerHTML = "";
+        setStatus("commentsStatus", result.error?.message || "Помилка завантаження коментарів", "error");
+        return;
     }
+
+    state.comments = result.data || [];
+
+    if (state.comments.length === 0) {
+        renderComments();
+        setStatus("commentsStatus", "Немає даних", "empty");
+        return;
+    }
+
+    renderComments();
+    clearStatus("commentsStatus");
 }
 
 async function loadRatings() {
-    const result = await fetchJson(RATINGS_API_URL);
-    if (result.ok) {
-        state.ratings = result.data;
-        renderRatings();
+    setStatus("ratingsStatus", "Завантаження...", "loading");
+    ratingsTableBody.innerHTML = "";
+
+    /* const result = await fetchJson(RATINGS_API_URL); */
+    const result = await ratingsApi.getList();
+
+    if (!result.ok) {
+        state.ratings = [];
+        ratingsTableBody.innerHTML = "";
+        setStatus("ratingsStatus", result.error?.message || "Помилка завантаження рейтингів", "error");
+        return;
     }
+
+    state.ratings = result.data || [];
+
+    if (state.ratings.length === 0) {
+        renderRatings();
+        setStatus("ratingsStatus", "Немає даних", "empty");
+        return;
+    }
+
+    renderRatings();
+    clearStatus("ratingsStatus");
 }
 
 /* RESOURCES API */
@@ -296,96 +685,102 @@ async function loadRatings() {
 //     });
 // }
 
-async function createResource(data) {
+/* async function createResource(data) {
     return fetchJson(RESOURCES_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+} */
 
-async function updateResource(id, data) {
+/*async function updateResource(id, data) {
     return fetchJson(`${RESOURCES_API_URL}/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+}*/
 
-async function deleteResource(id) {
+/*async function deleteResource(id) {
     return fetchJson(`${RESOURCES_API_URL}/${id}`, {
         method: "DELETE"
     });
-}
+}*/
+
+/*async function getResourceById(id) {
+    return fetchJson(`${RESOURCES_API_URL}/${id}`, {
+        method: "GET"
+    });
+}*/
 
 /* USERS API */
-async function createUser(data) {
+/*async function createUser(data) {
     return fetchJson(USERS_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+}*/
 
-async function updateUser(id, data) {
+/*async function updateUser(id, data) {
     return fetchJson(`${USERS_API_URL}/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+}*/
 
-async function deleteUser(id) {
+/*async function deleteUser(id) {
     return fetchJson(`${USERS_API_URL}/${id}`, {
         method: "DELETE"
     });
-}
+}*/
 
 /* COMMENTS API */
-async function createComment(data) {
+/*async function createComment(data) {
     return fetchJson(COMMENTS_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+}*/
 
-async function updateComment(id, data) {
+/*async function updateComment(id, data) {
     return fetchJson(`${COMMENTS_API_URL}/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+}*/
 
-async function deleteComment(id) {
+/*async function deleteComment(id) {
     return fetchJson(`${COMMENTS_API_URL}/${id}`, {
         method: "DELETE"
     });
-}
+}*/
 
 /* RATINGS API */
-async function createRating(data) {
+/*async function createRating(data) {
     return fetchJson(RATINGS_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+}*/
 
-async function updateRating(id, data) {
+/*async function updateRating(id, data) {
     return fetchJson(`${RATINGS_API_URL}/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     });
-}
+}*/
 
-async function deleteRating(id) {
+/*async function deleteRating(id) {
     return fetchJson(`${RATINGS_API_URL}/${id}`, {
         method: "DELETE"
     });
-}
+}*/
 
 /* RENDER RESOURCES */
 function render() {
@@ -496,7 +891,13 @@ form.addEventListener("submit", async (e) => {
     const isValid = validate(data);
 
     if (!isValid) {
-        if (!confirm("Форма невалідна. Відправити все одно?")) {
+        const confirmed = await showConfirm("Ви впевнені, що хочете видалити цей ресурс?", {
+            title: "Підтвердження відправки",
+            okText: "Так, відправити",
+            cancelText: "Скасувати"
+        });
+
+        if (!confirmed) {
             return;
         }
     }
@@ -504,20 +905,21 @@ form.addEventListener("submit", async (e) => {
     let result;
 
     if (editId !== null) {
-        result = await updateResource(editId, data);
+        /* result = await updateResource(editId, data); */
+        result = await resourcesApi.update(editId, data);
 
         if (result.ok) {
             editId = null;
             document.getElementById("submitBtn").textContent = "Додати";
         }
     } else {
-        result = await createResource(data);
+        /*result = await createResource(data);*/
+        result = await resourcesApi.create(data);
     }
 
     if (!result.ok) {
-        const message = result.error?.error?.message || "Помилка";
-
-        alert(message); // 🔥 найпростіше
+        const message = getApiErrorMessage(result, "Помилка");
+        showErrorModal(message);
 
         console.error("API error:", result.error);
         return;
@@ -547,22 +949,37 @@ tbody.addEventListener("click", async (e) => {
     if (!Number.isInteger(id)) return;
 
     if (button.classList.contains("delete-btn")) {
-        const result = await deleteResource(id);
+        const confirmed = await showConfirm("Ви впевнені, що хочете видалити цей ресурс?");
+
+        if (!confirmed) {
+            return;
+        }
+
+        scheduleDelete({
+            message: "Ресурс буде видалено",
+            button,
+            deleteAction: () => resourcesApi.remove(id),
+            afterDelete: async () => {
+                await loadResources();
+                await loadComments();
+                await loadRatings();
+            }
+        });
+    }
+
+    if (button.classList.contains("edit-btn")) {
+        /*const result = await getResourceById(id);*/
+        const result = await resourcesApi.getById(id);
+
         if (!result.ok) {
-            const message = result.error?.error?.message || "Помилка";
-            alert(message);
+            const message = getApiErrorMessage(result, "Не вдалося завантажити деталі ресурсу");
+            showErrorModal(message);
+
             console.error("API error:", result.error);
             return;
         }
 
-        await loadResources();
-        await loadComments();
-        await loadRatings();
-    }
-
-    if (button.classList.contains("edit-btn")) {
-        const item = state.resources.find(r => Number(r.id) === id);
-        if (!item) return;
+        const item = result.data;
 
         document.getElementById("title").value = item.title;
         document.getElementById("author").value = item.author;
@@ -584,7 +1001,13 @@ if (userForm) {
         const isValid = validateUserForm(data);
 
         if (!isValid) {
-            if (!confirm("Форма невалідна. Відправити все одно?")) {
+            const confirmed = await showConfirm("Ви впевнені, що хочете видалити цього користувача?", {
+                title: "Підтвердження відправки",
+                okText: "Так, відправити",
+                cancelText: "Скасувати"
+            });
+
+            if (!confirmed) {
                 return;
             }
         }
@@ -592,20 +1015,21 @@ if (userForm) {
         let result;
 
         if (editUserId !== null) {
-            result = await updateUser(editUserId, data);
+            /*result = await updateUser(editUserId, data);*/
+            result = await usersApi.update(editUserId, data);
 
             if (result.ok) {
                 editUserId = null;
                 document.getElementById("userSubmitBtn").textContent = "Додати користувача";
             }
         } else {
-            result = await createUser(data);
+            /*result = await createUser(data);*/
+            result = await usersApi.create(data);
         }
 
         if (!result.ok) {
-            const message = result.error?.error?.message || "Помилка";
-
-            alert(message);
+            const message = getApiErrorMessage(result, "Помилка");
+            showErrorModal(message);
 
             console.error("API error:", result.error);
             return;
@@ -639,17 +1063,22 @@ if (usersTableBody) {
         if (!Number.isInteger(id)) return;
 
         if (button.classList.contains("delete-user-btn")) {
-            const result = await deleteUser(id);
-            if (!result.ok) {
-                const message = result.error?.error?.message || "Помилка";
-                alert(message);
-                console.error("API error:", result.error);
+            const confirmed = await showConfirm("Ви впевнені, що хочете видалити цього користувача?");
+
+            if (!confirmed) {
                 return;
             }
 
-            await loadUsers();
-            await loadComments();
-            await loadRatings();
+            scheduleDelete({
+                message: "Користувач буде видалений",
+                button,
+                deleteAction: () => usersApi.remove(id),
+                afterDelete: async () => {
+                    await loadUsers();
+                    await loadComments();
+                    await loadRatings();
+                }
+            });
         }
 
         if (button.classList.contains("edit-user-btn")) {
@@ -674,7 +1103,13 @@ if (commentForm) {
         const isValid = validateCommentForm(data);
 
         if (!isValid) {
-            if (!confirm("Форма невалідна. Відправити все одно?")) {
+            const confirmed = await showConfirm("Ви впевнені, що хочете видалити цей коментар?", {
+                title: "Підтвердження відправки",
+                okText: "Так, відправити",
+                cancelText: "Скасувати"
+            });
+
+            if (!confirmed) {
                 return;
             }
         }
@@ -682,20 +1117,21 @@ if (commentForm) {
         let result;
 
         if (editCommentId !== null) {
-            result = await updateComment(editCommentId, data);
+            /*result = await updateComment(editCommentId, data);*/
+            result = await commentsApi.update(editCommentId, data);
 
             if (result.ok) {
                 editCommentId = null;
                 document.getElementById("commentSubmitBtn").textContent = "Додати коментар";
             }
         } else {
-            result = await createComment(data);
+            /*result = await createComment(data);*/
+            result = await commentsApi.create(data);
         }
 
         if (!result.ok) {
-            const message = result.error?.error?.message || "Помилка";
-
-            alert(message);
+            const message = getApiErrorMessage(result, "Помилка");
+            showErrorModal(message);
 
             console.error("API error:", result.error);
             return;
@@ -726,16 +1162,20 @@ if (commentsTableBody) {
         if (!Number.isInteger(id)) return;
 
         if (button.classList.contains("delete-comment-btn")) {
-            const result = await deleteComment(id);
-            if (!result.ok) {
-                const message = result.error?.error?.message || "Помилка";
+            const confirmed = await showConfirm("Ви впевнені, що хочете видалити цей коментар?");
 
-                alert(message);
-                console.error("API error:", result.error);
+            if (!confirmed) {
                 return;
             }
 
-            await loadComments();
+            scheduleDelete({
+                message: "Коментар буде видалено",
+                button,
+                deleteAction: () => commentsApi.remove(id),
+                afterDelete: async () => {
+                    await loadComments();
+                }
+            });
         }
 
         if (button.classList.contains("edit-comment-btn")) {
@@ -761,7 +1201,13 @@ if (ratingForm) {
         const isValid = validateRatingForm(data);
 
         if (!isValid) {
-            if (!confirm("Форма невалідна. Відправити все одно?")) {
+            const confirmed = await showConfirm("Ви впевнені, що хочете видалити цей рейтинг?", {
+                title: "Підтвердження відправки",
+                okText: "Так, відправити",
+                cancelText: "Скасувати"
+            });
+
+            if (!confirmed) {
                 return;
             }
         }
@@ -769,20 +1215,21 @@ if (ratingForm) {
         let result;
 
         if (editRatingId !== null) {
-            result = await updateRating(editRatingId, data);
+            /*result = await updateRating(editRatingId, data);*/
+            result = await ratingsApi.update(editRatingId, data);
 
             if (result.ok) {
                 editRatingId = null;
                 document.getElementById("ratingSubmitBtn").textContent = "Додати рейтинг";
             }
         } else {
-            result = await createRating(data);
+            /*result = await createRating(data);*/
+            result = await ratingsApi.create(data);
         }
 
         if (!result.ok) {
-            const message = result.error?.error?.message || "Помилка";
-
-            alert(message);
+            const message = getApiErrorMessage(result, "Помилка");
+            showErrorModal(message);
 
             console.error("API error:", result.error);
             return;
@@ -814,17 +1261,21 @@ if (ratingsTableBody) {
         if (!Number.isInteger(id)) return;
 
         if (button.classList.contains("delete-rating-btn")) {
-            const result = await deleteRating(id);
+            const confirmed = await showConfirm("Ви впевнені, що хочете видалити цей рейтинг?");
 
-            if (!result.ok) {
-                const message = result.error?.error?.message || "Помилка";
-                alert(message);
-                console.error("API error:", result.error);
+            if (!confirmed) {
                 return;
             }
 
-            await loadRatings();
-            await loadResources();
+            scheduleDelete({
+                message: "Рейтинг буде видалено",
+                button,
+                deleteAction: () => ratingsApi.remove(id),
+                afterDelete: async () => {
+                    await loadRatings();
+                    await loadResources();
+                }
+            });
         }
 
         if (button.classList.contains("edit-rating-btn")) {
@@ -840,6 +1291,8 @@ if (ratingsTableBody) {
         }
     });
 }
+
+
 
 /* FILTERS */
 searchInput.addEventListener("input", render);

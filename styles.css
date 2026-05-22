@@ -193,3 +193,159 @@ th {
         flex-wrap: wrap;
     }
 }
+
+.status {
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.status.loading {
+    color: #555;
+}
+
+.status.empty {
+    color: #777;
+}
+
+.status.error {
+    color: #b00020;
+    font-weight: 600;
+}
+
+.undo-toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    background: #1f2933;
+    color: white;
+    padding: 14px 18px;
+    border-radius: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.undo-toast.hidden {
+    display: none;
+}
+
+.undo-toast button {
+    background: #ffffff;
+    color: #1f2933;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.confirm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99998;
+}
+
+.confirm-modal.hidden {
+    display: none;
+}
+
+.confirm-box {
+    width: 400px;
+    background: white;
+    padding: 24px;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.confirm-box h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 20px;
+    text-align: center;
+}
+
+.confirm-box p {
+    margin-bottom: 20px;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.confirm-actions button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#confirmOkBtn {
+    background: #d62828;
+    color: white;
+}
+
+#confirmCancelBtn {
+    background: #1f2933;
+    color: white;
+}
+
+#confirmModal.hidden {
+    display: none !important;
+}
+
+#confirmModal:not(.hidden) {
+    display: flex !important;
+}
+
+.error-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+}
+
+.error-modal.hidden {
+    display: none;
+}
+
+.error-box {
+    width: 420px;
+    background: white;
+    padding: 24px;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.error-box h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #b00020;
+    font-size: 20px;
+}
+
+.error-box p {
+    white-space: pre-line;
+    margin-bottom: 20px;
+    line-height: 1.7;
+}
+
+.error-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+#errorOkBtn {
+    background: #263238;
+    color: white;
+}

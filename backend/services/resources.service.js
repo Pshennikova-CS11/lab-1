@@ -31,9 +31,22 @@ async function getAllResources(query = {}) {
         : "DESC";
 
     let sql = `
-        SELECT id, title, url, type, description, author, createdAt, averageRating
+        SELECT
+            id,
+            title,
+            url,
+            type,
+            description,
+            author,
+            createdAt,
+            averageRating,
+            'beginner' AS difficulty
         FROM Resources
     `;
+
+    if (type) {
+        sql += ` WHERE type = '${type}'`;
+    }
 
     const filters = [];
 

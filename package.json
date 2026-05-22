@@ -1,5 +1,11 @@
 {
+  "scripts": {
+    "build:frontend": "tsc -p tsconfig.frontend.json"
+  },
   "dependencies": {
     "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

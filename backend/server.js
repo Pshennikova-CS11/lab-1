@@ -1,7 +1,7 @@
 const express = require("express");
 // const { v4: uuidv4 } = require("uuid");
 const cors = require("cors");
-const path = require("path");
+//const path = require("path");
 
 const logger = require("./middleware/logger");
 const errorHandler = require("./middleware/error-handler");
@@ -19,28 +19,61 @@ const { runMigrations } = require("./db/migrate");
 const app = express();
 
 /* КРИТЕРІЙ: працюючий Express-сервер із базовою структурою. */
-app.use(cors());
+/*app.use(cors());*/
+/*app.use(express.json());*/
+
+/*backend дозволяє запити тільки з цих адрес frontend*/
+const allowedOrigins = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        /*сервер перевіряє, чи входить origin запиту у список дозволених*/
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error("CORS: origin is not allowed"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 /* ПІДКЛЮЧЕННЯ middleware логування */
 app.use(logger);
 
 /* Щоб на localhost:3000 відкривався frontend */
-app.use(express.static(path.join(__dirname, "..")));
+/*app.use(express.static(path.join(__dirname, "..")));*/
 
-app.get("/", (req, res) => {
+/*app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "..", "index.html"));
-});
+});*/
 
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
 });
 
 /* ПІДКЛЮЧЕННЯ ROUTES */
-app.use("/api/users", usersRoutes);
-app.use("/api/resources", resourcesRoutes);
-app.use("/api/ratings", ratingsRoutes);
-app.use("/api/comments", commentsRoutes);
+app.use("/api/v1/users", usersRoutes);
+app.use("/api/v1/resources", resourcesRoutes);
+app.use("/api/v1/ratings", ratingsRoutes);
+app.use("/api/v1/comments", commentsRoutes);
+
+/*тестовий endpoint 500 Internal Server Error*/
+/*app.get("/api/v1/test-500", (req, res, next) => {
+    next(new Error("Test server error"));
+});*/
 
 /* ПІДКЛЮЧЕННЯ централізованого обробника помилок */
 app.use(errorHandler);

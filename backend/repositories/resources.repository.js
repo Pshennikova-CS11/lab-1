@@ -6,7 +6,16 @@ async function findAllResources(sql) {
 
 async function findResourceById(resourceId) {
     return await get(`
-        SELECT id, title, url, type, description, author, createdAt, averageRating
+        SELECT
+            id,
+            title,
+            url,
+            type,
+            description,
+            author,
+            createdAt,
+            averageRating,
+            'beginner' AS difficulty
         FROM Resources
         WHERE id = ${resourceId};
     `);
@@ -62,10 +71,31 @@ async function updateResourceById(resourceId, title, url, type, description, aut
 }
 
 async function deleteResourceById(resourceId) {
-    return await run(`
-        DELETE FROM Resources
-        WHERE id = ${resourceId};
-    `);
+    try {
+        await run(`BEGIN TRANSACTION;`);
+
+        await run(`
+            DELETE FROM Ratings
+            WHERE resourceId = ${resourceId};
+        `);
+
+        await run(`
+            DELETE FROM Comments
+            WHERE resourceId = ${resourceId};
+        `);
+
+        const result = await run(`
+            DELETE FROM Resources
+            WHERE id = ${resourceId};
+        `);
+
+        await run(`COMMIT;`);
+
+        return result;
+    } catch (error) {
+        await run(`ROLLBACK;`);
+        throw error;
+    }
 }
 
 module.exports = {
