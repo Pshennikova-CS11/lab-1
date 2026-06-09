@@ -12,7 +12,19 @@ import { logger } from "./middleware/logger";
 
 export const app = express();
 
+app.disable("x-powered-by");
+
+app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+    next();
+});
+
 const allowedOrigins = [
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
     "http://localhost:5173",
@@ -32,7 +44,7 @@ const corsOptions: cors.CorsOptions = {
         return callback(new Error("CORS: origin is not allowed"));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Demo-UserId"]
 };
 
 app.use(cors(corsOptions));

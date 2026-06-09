@@ -1,21 +1,21 @@
 import { CommentEntity } from "../types/comment";
 
 export interface CreateCommentDto {
-    resourceId: string;
-    userId: string;
+    resourceId: number;
+    userId: number;
     text: string;
 }
 
 export interface PatchCommentDto {
-    resourceId?: string;
-    userId?: string;
+    resourceId?: number;
+    userId?: number;
     text?: string;
 }
 
 export interface CommentResponseDto {
-    id: string;
-    resourceId: string;
-    userId: string;
+    id: number;
+    resourceId: number;
+    userId: number;
     text: string;
     createdAt: string;
     updatedAt: string;

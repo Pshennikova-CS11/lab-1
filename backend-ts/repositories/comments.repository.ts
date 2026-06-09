@@ -1,71 +1,118 @@
 import { CommentEntity } from "../types/comment";
 import { all, get, run } from "../db/dbClient";
 
-type CreateCommentInput = Omit<CommentEntity, "id">;
+type CreateCommentInput = {
+    resourceId: number;
+    userId: number;
+    text: string;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt: string | null;
+};
 
 class CommentsRepository {
     async findAll(query: { page?: number; pageSize?: number } = {}): Promise<CommentEntity[]> {
         const limit = Number(query.pageSize) || 100;
         const offset = ((Number(query.page) || 1) - 1) * limit;
 
-        return await all<CommentEntity>(`
-            SELECT id, resourceId, userId, text, createdAt, updatedAt, deletedAt
-            FROM Comments
-            ORDER BY createdAt DESC
-            LIMIT ${limit} OFFSET ${offset}
-        `);
+        return await all<CommentEntity>(
+            `
+                SELECT id, resourceId, userId, text, createdAt, updatedAt, deletedAt
+                FROM Comments
+                ORDER BY createdAt DESC
+                    LIMIT ? OFFSET ?;
+            `,
+            [limit, offset]
+        );
     }
 
     async findById(id: number): Promise<CommentEntity | undefined> {
-        return await get<CommentEntity>(`
+        return await get<CommentEntity>(
+            `
+                SELECT id, resourceId, userId, text, createdAt, updatedAt, deletedAt
+                FROM Comments
+                WHERE id = ?;
+            `,
+            [id]
+        );
+    }
+
+    async findByIdForUser(id: number, userId: number): Promise<CommentEntity | undefined> {
+        return await get<CommentEntity>(
+            `
             SELECT id, resourceId, userId, text, createdAt, updatedAt, deletedAt
             FROM Comments
-            WHERE id = ${id}
-        `);
+            WHERE id = ? AND userId = ?;
+            `,
+            [id, userId]
+        );
     }
 
     async create(comment: CreateCommentInput): Promise<CommentEntity> {
-        const escapedText = comment.text.replace(/'/g, "''");
-
-        const result = await run(`
+        const result = await run(
+            `
             INSERT INTO Comments (resourceId, userId, text, createdAt, updatedAt, deletedAt)
-            VALUES (
-                ${comment.resourceId},
-                ${comment.userId},
-                '${escapedText}',
-                '${comment.createdAt}',
-                '${comment.updatedAt}',
-                NULL
-            )
-        `);
+            VALUES (?, ?, ?, ?, ?, ?);
+            `,
+            [
+                comment.resourceId,
+                comment.userId,
+                comment.text,
+                comment.createdAt,
+                comment.updatedAt,
+                comment.deletedAt
+            ]
+        );
 
-        return (await this.findById(result.lastID))!;
+        return (await this.findByIdForUser(result.lastID, comment.userId))!;
     }
 
-    async update(id: number, changes: Partial<CommentEntity>): Promise<CommentEntity | null> {
-        const existing = await this.findById(id);
+    async updateForUser(
+        id: number,
+        currentUserId: number,
+        changes: {
+            resourceId?: number;
+            text?: string;
+            updatedAt: string;
+        }
+    ): Promise<CommentEntity | null> {
+        const existing = await this.findByIdForUser(id, currentUserId);
 
-        if (!existing) {
+        if (!existing || existing.deletedAt !== null) {
             return null;
         }
 
         const resourceId = changes.resourceId ?? existing.resourceId;
-        const userId = changes.userId ?? existing.userId;
-        const text = (changes.text ?? existing.text).replace(/'/g, "''");
-        const updatedAt = changes.updatedAt ?? existing.updatedAt;
-        const deletedAt = changes.deletedAt ?? existing.deletedAt;
+        const text = changes.text ?? existing.text;
 
-        await run(`
+        await run(
+            `
             UPDATE Comments
-            SET resourceId = ${resourceId},
-                userId = ${userId},
-                text = '${text}',
-                updatedAt = '${updatedAt}',
-                deletedAt = ${deletedAt ? `'${deletedAt}'` : "NULL"}
-            WHERE id = ${id}
-        `);
+            SET resourceId = ?,
+                text = ?,
+                updatedAt = ?
+            WHERE id = ? AND userId = ?;
+            `,
+            [resourceId, text, changes.updatedAt, id, currentUserId]
+        );
 
-        return await this.findById(id) || null;
+        return (await this.findByIdForUser(id, currentUserId)) || null;
+    }
+
+    async softDeleteForUser(
+        id: number,
+        currentUserId: number,
+        deletedAt: string
+    ): Promise<{ changes: number }> {
+        return await run(
+            `
+            UPDATE Comments
+            SET deletedAt = ?,
+                updatedAt = ?
+            WHERE id = ? AND userId = ?;
+            `,
+            [deletedAt, deletedAt, id, currentUserId]
+        );
     }
 }
 

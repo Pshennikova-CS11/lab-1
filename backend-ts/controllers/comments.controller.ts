@@ -1,8 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import { CommentResponseDto, CreateCommentDto, PatchCommentDto } from "../dtos/comments.dto";
 import { commentsService } from "../services/comments.service";
-import { ApiItemResponse, ApiListResponse } from "../types/api";
+import { ApiListResponse } from "../types/api";
 import { CommentListQuery } from "../types/comment";
+
+type CommentParams = {
+    id: string;
+};
 
 export async function getComments(
     req: Request<{}, ApiListResponse<CommentResponseDto>, never, CommentListQuery>,
@@ -18,53 +22,63 @@ export async function getComments(
 }
 
 export async function getCommentById(
-    req: Request<{ id: string }, ApiItemResponse<CommentResponseDto>>,
+    req: Request<CommentParams>,
     res: Response,
     next: NextFunction
 ): Promise<void> {
     try {
-        const result = await commentsService.getById(req.params.id);
+        const currentUserId = req.user!.id;
+        const result = await commentsService.getById(req.params.id, currentUserId);
         res.status(200).json(result);
-    } catch (error) {
-        next(error);
+    } catch (err) {
+        next(err);
     }
 }
 
 export async function createComment(
-    req: Request<{}, ApiItemResponse<CommentResponseDto>, CreateCommentDto>,
+    req: Request<{}, unknown, CreateCommentDto>,
     res: Response,
     next: NextFunction
 ): Promise<void> {
     try {
-        const result = await commentsService.create(req.body);
+        const currentUserId = req.user!.id;
+        const result = await commentsService.create(req.body, currentUserId);
         res.status(201).json(result);
-    } catch (error) {
-        next(error);
+    } catch (err) {
+        next(err);
     }
 }
 
 export async function patchComment(
-    req: Request<{ id: string }, ApiItemResponse<CommentResponseDto>, PatchCommentDto>,
+    req: Request<CommentParams, unknown, PatchCommentDto>,
     res: Response,
     next: NextFunction
 ): Promise<void> {
     try {
-        const result = await commentsService.patch(req.params.id, req.body);
+        const currentUserId = req.user!.id;
+
+        const result = await commentsService.patch(
+            req.params.id,
+            req.body,
+            currentUserId
+        );
+
         res.status(200).json(result);
-    } catch (error) {
-        next(error);
+    } catch (err) {
+        next(err);
     }
 }
 
 export async function deleteComment(
-    req: Request<{ id: string }>,
+    req: Request<CommentParams>,
     res: Response,
     next: NextFunction
 ): Promise<void> {
     try {
-        await commentsService.softDelete(req.params.id);
+        const currentUserId = req.user!.id;
+        await commentsService.softDelete(req.params.id, currentUserId);
         res.status(204).send();
-    } catch (error) {
-        next(error);
+    } catch (err) {
+        next(err);
     }
 }

@@ -1,27 +1,29 @@
 function errorHandler(err, req, res, next) {
     const status = err.status || 500;
 
-    console.error(
-        `[ERROR] ${req.method} ${req.originalUrl} -> ${status}`,
-        {
-            code: err.code || "INTERNAL_SERVER_ERROR",
-            message: err.message || "Unexpected error",
-            details: err.details || null
-        }
-    );
+    const code = err.code || "INTERNAL_SERVER_ERROR";
 
-    const response = {
+    const message = status === 500
+        ? "Internal server error"
+        : err.message || "Unexpected error";
+
+    const details = status === 500
+        ? null
+        : err.details || null;
+
+    console.error(`[ERROR] ${req.method} ${req.originalUrl} -> ${status}`, {
+        code,
+        message: err.message,
+        details: err.details || null
+    });
+
+    res.status(status).json({
         error: {
-            code: err.code || "INTERNAL_SERVER_ERROR",
-            message: err.message || "Unexpected error"
+            code,
+            message,
+            details
         }
-    };
-
-    if (err.details) {
-        response.error.details = err.details;
-    }
-
-    res.status(status).json(response);
+    });
 }
 
 module.exports = errorHandler;

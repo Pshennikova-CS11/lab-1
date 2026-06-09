@@ -1,5 +1,3 @@
-/// <reference path="../../shared/dto.types.ts" />
-
 export interface ApiItemResponse<T> {
     item: T;
 }
@@ -12,19 +10,104 @@ export interface ApiListResponse<T> {
 }
 
 export interface ApiErrorResponse {
-    status: "error";
-    message: string;
-    details?: unknown;
+    error: {
+        code: string;
+        message: string;
+        details?: unknown;
+    };
 }
 
-export type BackendResourceDto = SharedResourceDto;
-export type BackendCreateResourceDto = SharedCreateResourceDto;
+/* RESOURCES */
 
-export type BackendUserDto = SharedUserDto;
-export type BackendCreateUserDto = SharedCreateUserDto;
+export type BackendResourceDto = {
+    id: number;
+    title: string;
+    url: string;
+    type: string;
+    description: string;
+    author: string;
+    createdAt: string;
+    updatedAt?: string;
+};
 
-export type BackendCommentDto = SharedCommentDto;
-export type BackendCreateCommentDto = SharedCreateCommentDto;
+export type BackendCreateResourceDto = {
+    title: string;
+    url: string;
+    type: string;
+    description?: string;
+    author: string;
+};
 
-export type BackendRatingDto = SharedRatingDto;
-export type BackendCreateRatingDto = SharedCreateRatingDto;
+export type BackendPatchResourceDto = {
+    title?: string;
+    url?: string;
+    type?: string;
+    description?: string;
+    author?: string;
+};
+
+/* USERS */
+
+export type BackendUserDto = {
+    id: number;
+    name: string;
+    email: string;
+    createdAt: string;
+    updatedAt?: string;
+};
+
+export type BackendCreateUserDto = {
+    name: string;
+    email: string;
+};
+
+export type BackendPatchUserDto = {
+    name?: string;
+    email?: string;
+};
+
+/* COMMENTS */
+
+export type BackendCommentDto = {
+    id: number;
+    resourceId: number;
+    userId: number;
+    text: string;
+    createdAt: string;
+    updatedAt?: string;
+};
+
+export type BackendCreateCommentDto = {
+    resourceId: number;
+    userId: number;
+    text: string;
+};
+
+export type BackendPatchCommentDto = {
+    resourceId?: number;
+    userId?: number;
+    text?: string;
+};
+
+/* RATINGS */
+
+export type BackendRatingDto = {
+    id: number;
+    resourceId: number;
+    userId: number;
+    value: number;
+    createdAt: string;
+    updatedAt?: string;
+};
+
+export type BackendCreateRatingDto = {
+    resourceId: number;
+    userId: number;
+    value: number;
+};
+
+export type BackendPatchRatingDto = {
+    resourceId?: number;
+    userId?: number;
+    value?: number;
+};

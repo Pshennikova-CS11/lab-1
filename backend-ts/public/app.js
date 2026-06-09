@@ -34,10 +34,13 @@ const ratingsTableBody = document.getElementById("ratingsTableBody");
 const ratingResetBtn = document.getElementById("ratingResetBtn");
 
 /* API URLS */
-const RESOURCES_API_URL = "/api/resources";
-const USERS_API_URL = "/api/users";
-const COMMENTS_API_URL = "/api/comments";
-const RATINGS_API_URL = "/api/ratings";
+const API_BASE_URL = "/api/v1";
+const DEMO_USER_ID = "1";
+
+const RESOURCES_API_URL = `${API_BASE_URL}/resources`;
+const USERS_API_URL = `${API_BASE_URL}/users`;
+const COMMENTS_API_URL = `${API_BASE_URL}/comments`;
+const RATINGS_API_URL = `${API_BASE_URL}/ratings`;
 
 /* щоб витягнути весь список і далі фільтрувати на фронті */
 const DEFAULT_PAGE = 1;
@@ -130,7 +133,20 @@ function renderSelectOptions() {
 }
 
 async function fetchJson(url, options = {}) {
-    const response = await fetch(url, options);
+    const headers = new Headers(options.headers || {});
+
+    if (!headers.has("X-Demo-UserId")) {
+        headers.set("X-Demo-UserId", DEMO_USER_ID);
+    }
+
+    if (options.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+    }
+
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
 
     if (response.status === 204) {
         return { ok: true, data: null };
@@ -401,7 +417,10 @@ async function deleteUser(id) {
 async function createComment(data) {
     return fetchJson(COMMENTS_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "X-Demo-UserId": String(data.userId)
+        },
         body: JSON.stringify(data)
     });
 }
@@ -409,14 +428,23 @@ async function createComment(data) {
 async function updateComment(id, data) {
     return fetchJson(`${COMMENTS_API_URL}/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "X-Demo-UserId": String(data.userId)
+        },
         body: JSON.stringify(data)
     });
 }
 
 async function deleteComment(id) {
+    const comment = state.comments.find((c) => Number(c.id) === Number(id));
+    const ownerUserId = comment ? String(comment.userId) : DEMO_USER_ID;
+
     return fetchJson(`${COMMENTS_API_URL}/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: {
+            "X-Demo-UserId": ownerUserId
+        }
     });
 }
 
@@ -512,20 +540,51 @@ function renderUsers() {
 function renderComments() {
     if (!commentsTableBody) return;
 
-    commentsTableBody.innerHTML = state.comments.map((c, index) => `
-        <tr>
-            <td>${index + 1}</td>
-            <td>${getResourceTitle(c.resourceId)}</td>
-            <td>${getUserName(c.userId)}</td>
-            <td>${c.text}</td>
-            <td>
-                <div class="actions">
-                    <button type="button" data-id="${c.id}" class="edit-comment-btn">Редагувати</button>
-                    <button type="button" data-id="${c.id}" class="delete-comment-btn">Видалити</button>
-                </div>
-            </td>
-        </tr>
-    `).join("");
+    commentsTableBody.replaceChildren();
+
+    state.comments.forEach((c, index) => {
+        const tr = document.createElement("tr");
+
+        const indexTd = document.createElement("td");
+        indexTd.textContent = String(index + 1);
+
+        const resourceTd = document.createElement("td");
+        resourceTd.textContent = String(getResourceTitle(c.resourceId));
+
+        const userTd = document.createElement("td");
+        userTd.textContent = String(getUserName(c.userId));
+
+        const textTd = document.createElement("td");
+        textTd.textContent = String(c.text);
+
+        const actionsTd = document.createElement("td");
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.dataset.id = String(c.id);
+        editBtn.className = "edit-comment-btn";
+        editBtn.textContent = "Редагувати";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.dataset.id = String(c.id);
+        deleteBtn.className = "delete-comment-btn";
+        deleteBtn.textContent = "Видалити";
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(deleteBtn);
+        actionsTd.appendChild(actionsDiv);
+
+        tr.appendChild(indexTd);
+        tr.appendChild(resourceTd);
+        tr.appendChild(userTd);
+        tr.appendChild(textTd);
+        tr.appendChild(actionsTd);
+
+        commentsTableBody.appendChild(tr);
+    });
 }
 
 /* RENDER RATINGS */

@@ -230,3 +230,35 @@ GET http://localhost:3001/api/users/not-existing-id
 GET http://localhost:3001/api/comments/not-existing-id
 ###
 GET http://localhost:3001/api/ratings/not-existing-id
+
+###
+GET http://localhost:3001/api/v1/health
+
+### SQLi після виправлення
+GET http://localhost:3001/api/v1/resources?search=%27%20OR%20%271%27%3D%271
+
+### IDOR без заголовка
+GET http://localhost:3001/api/v1/comments/2
+
+### IDOR чужий користувач
+GET http://localhost:3001/api/v1/comments/2
+X-Demo-UserId: 3
+
+### IDOR власник
+GET http://localhost:3001/api/v1/comments/2
+X-Demo-UserId: 4
+
+### IDOR update чужого коментаря
+PATCH http://localhost:3001/api/v1/comments/2
+Content-Type: application/json
+X-Demo-UserId: 3
+
+{
+  "text": "спроба змінити чужий коментар"
+}
+
+
+### IDOR delete чужого коментаря
+DELETE http://localhost:3001/api/v1/comments/2
+X-Demo-UserId: 3
+

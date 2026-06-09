@@ -1,9 +1,9 @@
-const { db } = require("./db"); //імпортуємо вже відкрите підключення до SQLite з файлу db.js
+const { db } = require("./db"); // імпортуємо вже відкрите підключення до SQLite з файлу db.js
 
 // SELECT many, функція all виконує SELECT-запит, який повертає багато рядків
-function all(sql) {
+function all(sql, params = []) {
     return new Promise((resolve, reject) => {
-        db.all(sql, (err, rows) => {
+        db.all(sql, params, (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -11,9 +11,9 @@ function all(sql) {
 }
 
 // SELECT one, функція get виконує SELECT-запит, який повертає один рядок
-function get(sql) {
+function get(sql, params = []) {
     return new Promise((resolve, reject) => {
-        db.get(sql, (err, row) => {
+        db.get(sql, params, (err, row) => {
             if (err) return reject(err);
             resolve(row);
         });
@@ -21,9 +21,9 @@ function get(sql) {
 }
 
 // Функція run використовується для SQL-запитів, які змінюють дані: INSERT, UPDATE, DELETE
-function run(sql) {
+function run(sql, params = []) {
     return new Promise((resolve, reject) => {
-        db.run(sql, function (err) {
+        db.run(sql, params, function (err) {
             if (err) return reject(err);
 
             resolve({

@@ -1,7 +1,8 @@
 /// <reference path="./types.ts" />
 
-const API_BASE_URL = "http://localhost:3000/api/v1";
+const API_BASE_URL = "http://localhost:3001/api/v1";
 const REQUEST_TIMEOUT_MS = 15000;
+const DEMO_USER_ID = "1";
 
 async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<ApiResult<T>> {
     const controller = new AbortController();
@@ -13,8 +14,17 @@ async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<Api
     let response: Response;
 
     try {
+        const headers = new Headers(options.headers);
+
+        headers.set("X-Demo-UserId", DEMO_USER_ID);
+
+        if (options.body && !headers.has("Content-Type")) {
+            headers.set("Content-Type", "application/json");
+        }
+
         response = await fetch(url, {
             ...options,
+            headers,
             signal: controller.signal
         });
     } catch (error) {

@@ -17,6 +17,15 @@ const commentsRoutes = require("./routes/comments.routes");
 const { runMigrations } = require("./db/migrate");
 
 const app = express();
+app.disable("x-powered-by"); /*прибирає з відповіді інформацію, що сервер працює на Express.*/
+
+app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff"); // забороняє браузеру самостійно “вгадувати” тип файлу.
+    res.setHeader("X-Frame-Options", "DENY"); // забороняє відкривати сторінку у frame/iframe, що зменшує ризик clickjacking.
+    res.setHeader("Referrer-Policy", "no-referrer"); // не передає адресу попередньої сторінки в інші запити.
+    res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=()"); // обмежує доступ до камери, мікрофона та геолокації.
+    next();
+});
 
 /* КРИТЕРІЙ: працюючий Express-сервер із базовою структурою. */
 /*app.use(cors());*/
@@ -44,7 +53,7 @@ const corsOptions = {
         return callback(new Error("CORS: origin is not allowed"));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Demo-UserId"]
 };
 
 app.use(cors(corsOptions));

@@ -36,7 +36,12 @@ export class RatingsService {
         const page = normalizePage(query.page);
         const pageSize = normalizePageSize(query.pageSize);
 
-        let items = await ratingsRepository.findAll(query);
+        const pagination = {
+            page: query.page ? Number(query.page) : undefined,
+            pageSize: query.pageSize ? Number(query.pageSize) : undefined
+        };
+
+        let items = await ratingsRepository.findAll(pagination);
 
         items = items.filter((item) => item.deletedAt === null);
 

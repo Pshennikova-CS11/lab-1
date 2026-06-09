@@ -15,18 +15,15 @@ function normalizeId(value, fieldName) {
     return id;
 }
 
-function escapeSqlString(value) {
-    return String(value).replace(/'/g, "''");
-}
-
 async function getAllComments() {
     return await commentsRepository.findAllComments();
 }
 
-async function getCommentById(id) {
+async function getCommentById(id, currentUserId) {
     const commentId = normalizeId(id, "comment id");
+    const userId = normalizeId(currentUserId, "user id");
 
-    const comment = await commentsRepository.findCommentById(commentId);
+    const comment = await commentsRepository.findCommentByIdForUser(commentId, userId);
 
     if (!comment) {
         throw {
@@ -39,8 +36,16 @@ async function getCommentById(id) {
     return comment;
 }
 
-async function createComment(data) {
-    const errors = validateComment(data);
+async function createComment(data, currentUserId) {
+    const userId = normalizeId(currentUserId, "user id");
+
+    // userId з X-Demo-UserId
+    const dataForValidation = {
+        ...data,
+        userId
+    };
+
+    const errors = validateComment(dataForValidation);
 
     if (errors.length) {
         throw {
@@ -52,13 +57,18 @@ async function createComment(data) {
     }
 
     const resourceId = normalizeId(data.resourceId, "resource id");
-    const userId = normalizeId(data.userId, "user id");
-    const safeText = escapeSqlString(data.text.trim());
+    const text = String(data.text).trim();
     const now = new Date().toISOString();
 
     try {
-        const result = await commentsRepository.insertComment(resourceId, userId, safeText, now);
-        return await getCommentById(result.lastID);
+        const result = await commentsRepository.insertComment(
+            resourceId,
+            userId,
+            text,
+            now
+        );
+
+        return await commentsRepository.findCommentByIdForUser(result.lastID, userId);
     } catch (err) {
         if (String(err.message).includes("FOREIGN KEY constraint failed")) {
             throw {
@@ -72,12 +82,16 @@ async function createComment(data) {
     }
 }
 
-async function updateComment(id, data) {
+async function updateComment(id, data, currentUserId) {
     const commentId = normalizeId(id, "comment id");
+    const userId = normalizeId(currentUserId, "user id");
 
-    await getCommentById(commentId);
+    const dataForValidation = {
+        ...data,
+        userId
+    };
 
-    const errors = validateComment(data);
+    const errors = validateComment(dataForValidation);
 
     if (errors.length) {
         throw {
@@ -89,15 +103,14 @@ async function updateComment(id, data) {
     }
 
     const resourceId = normalizeId(data.resourceId, "resource id");
-    const userId = normalizeId(data.userId, "user id");
-    const safeText = escapeSqlString(data.text.trim());
+    const text = String(data.text).trim();
 
     try {
         const result = await commentsRepository.updateCommentById(
             commentId,
             resourceId,
-            userId,
-            safeText
+            text,
+            userId
         );
 
         if (result.changes === 0) {
@@ -108,7 +121,7 @@ async function updateComment(id, data) {
             };
         }
 
-        return await getCommentById(commentId);
+        return await commentsRepository.findCommentByIdForUser(commentId, userId);
     } catch (err) {
         if (String(err.message).includes("FOREIGN KEY constraint failed")) {
             throw {
@@ -122,10 +135,11 @@ async function updateComment(id, data) {
     }
 }
 
-async function deleteComment(id) {
+async function deleteComment(id, currentUserId) {
     const commentId = normalizeId(id, "comment id");
+    const userId = normalizeId(currentUserId, "user id");
 
-    const result = await commentsRepository.deleteCommentById(commentId);
+    const result = await commentsRepository.deleteCommentById(commentId, userId);
 
     if (result.changes === 0) {
         throw {

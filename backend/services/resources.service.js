@@ -1,10 +1,6 @@
 const resourcesRepository = require("../repositories/resources.repository");
 const { validateResource } = require("../validators/resources.validator");
 
-function escapeSqlString(value) {
-    return String(value).replace(/'/g, "''");
-}
-
 function normalizeResourceId(id) {
     const resourceId = Number(id);
 
@@ -44,20 +40,17 @@ async function getAllResources(query = {}) {
         FROM Resources
     `;
 
-    if (type) {
-        sql += ` WHERE type = '${type}'`;
-    }
-
     const filters = [];
+    const params = [];
 
     if (type) {
-        const safeType = escapeSqlString(String(type).trim());
-        filters.push(`type = '${safeType}'`);
+        filters.push("type = ?");
+        params.push(String(type).trim());
     }
 
     if (author) {
-        const safeAuthor = escapeSqlString(String(author).trim());
-        filters.push(`author LIKE '%${safeAuthor}%'`);
+        filters.push("author LIKE ?");
+        params.push(`%${String(author).trim()}%`);
     }
 
     if (filters.length > 0) {
@@ -70,13 +63,14 @@ async function getAllResources(query = {}) {
         const normalizedLimit = Number(limit);
 
         if (Number.isInteger(normalizedLimit) && normalizedLimit > 0) {
-            sql += ` LIMIT ${normalizedLimit}`;
+            sql += ` LIMIT ?`;
+            params.push(normalizedLimit);
         }
     }
 
     sql += `;`;
 
-    return await resourcesRepository.findAllResources(sql);
+    return await resourcesRepository.findAllResources(sql, params);
 }
 
 async function getResourceById(id) {
@@ -140,20 +134,15 @@ async function createResource(data) {
         };
     }
 
-    const safeTitle = escapeSqlString(data.title);
-    const safeUrl = escapeSqlString(data.url);
-    const safeType = escapeSqlString(data.type);
-    const safeDescription = escapeSqlString(data.description || "");
-    const safeAuthor = escapeSqlString(data.author);
     const now = new Date().toISOString();
 
     try {
         const result = await resourcesRepository.insertResource(
-            safeTitle,
-            safeUrl,
-            safeType,
-            safeDescription,
-            safeAuthor,
+            data.title,
+            data.url,
+            data.type,
+            data.description || "",
+            data.author,
             now
         );
 
@@ -197,20 +186,14 @@ async function updateResource(id, data) {
         };
     }
 
-    const safeTitle = escapeSqlString(data.title);
-    const safeUrl = escapeSqlString(data.url);
-    const safeType = escapeSqlString(data.type);
-    const safeDescription = escapeSqlString(data.description || "");
-    const safeAuthor = escapeSqlString(data.author);
-
     try {
         const result = await resourcesRepository.updateResourceById(
             resourceId,
-            safeTitle,
-            safeUrl,
-            safeType,
-            safeDescription,
-            safeAuthor
+            data.title,
+            data.url,
+            data.type,
+            data.description || "",
+            data.author
         );
 
         if (result.changes === 0) {

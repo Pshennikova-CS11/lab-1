@@ -536,6 +536,98 @@ function validateCommentForm(data) {
     return isValid;
 }
 
+const COMMENTS_AUTH_URL = "http://localhost:3000/api/v1/comments";
+
+function getDemoUserIdFromCommentForm() {
+    return document.getElementById("commentUserId").value;
+}
+
+function toCommentRequestBody(data) {
+    return {
+        resourceId: Number(data.resourceId),
+        text: data.text
+    };
+}
+
+async function commentFetchJson(url, options = {}) {
+    let response;
+
+    try {
+        response = await fetch(url, options);
+    } catch (error) {
+        return {
+            ok: false,
+            error: {
+                status: 0,
+                message: "Помилка мережі або CORS",
+                details: error.message
+            }
+        };
+    }
+
+    if (response.status === 204) {
+        return { ok: true, data: null };
+    }
+
+    const text = await response.text();
+
+    let data = null;
+
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch {
+        data = text;
+    }
+
+    if (!response.ok) {
+        return {
+            ok: false,
+            error: {
+                status: response.status,
+                message: data?.error?.message || data?.message || "HTTP помилка",
+                details: data
+            }
+        };
+    }
+
+    return { ok: true, data };
+}
+
+function createCommentWithAuth(data) {
+    const demoUserId = getDemoUserIdFromCommentForm();
+
+    return commentFetchJson(COMMENTS_AUTH_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Demo-UserId": demoUserId
+        },
+        body: JSON.stringify(toCommentRequestBody(data))
+    });
+}
+
+function updateCommentWithAuth(id, data) {
+    const demoUserId = getDemoUserIdFromCommentForm();
+
+    return commentFetchJson(`${COMMENTS_AUTH_URL}/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Demo-UserId": demoUserId
+        },
+        body: JSON.stringify(toCommentRequestBody(data))
+    });
+}
+
+function deleteCommentWithAuth(id, userId) {
+    return commentFetchJson(`${COMMENTS_AUTH_URL}/${id}`, {
+        method: "DELETE",
+        headers: {
+            "X-Demo-UserId": userId
+        }
+    });
+}
+
 /* RATING FORM */
 function readRatingForm() {
     return {
@@ -844,7 +936,7 @@ function renderUsers() {
 }
 
 /* RENDER COMMENTS */
-function renderComments() {
+/*function renderComments() {
     if (!commentsTableBody) return;
 
     commentsTableBody.innerHTML = state.comments.map((c, index) => `
@@ -861,6 +953,49 @@ function renderComments() {
             </td>
         </tr>
     `).join("");
+}*/
+
+function createTextCell(value) {
+    const td = document.createElement("td");
+    td.textContent = value ?? "";
+    return td;
+}
+
+function renderComments() {
+    if (!commentsTableBody) return;
+
+    commentsTableBody.replaceChildren();
+
+    state.comments.forEach((c, index) => {
+        const tr = document.createElement("tr");
+
+        tr.appendChild(createTextCell(index + 1));
+        tr.appendChild(createTextCell(getResourceTitle(c.resourceId)));
+        tr.appendChild(createTextCell(getUserName(c.userId)));
+        tr.appendChild(createTextCell(c.text));
+
+        const actionsTd = document.createElement("td");
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.dataset.id = c.id;
+        editBtn.className = "edit-comment-btn";
+        editBtn.textContent = "Редагувати";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.dataset.id = c.id;
+        deleteBtn.className = "delete-comment-btn";
+        deleteBtn.textContent = "Видалити";
+
+        actionsDiv.append(editBtn, deleteBtn);
+        actionsTd.appendChild(actionsDiv);
+        tr.appendChild(actionsTd);
+
+        commentsTableBody.appendChild(tr);
+    });
 }
 
 /* RENDER RATINGS */
@@ -1117,16 +1252,14 @@ if (commentForm) {
         let result;
 
         if (editCommentId !== null) {
-            /*result = await updateComment(editCommentId, data);*/
-            result = await commentsApi.update(editCommentId, data);
+            result = await updateCommentWithAuth(editCommentId, data);
 
             if (result.ok) {
                 editCommentId = null;
                 document.getElementById("commentSubmitBtn").textContent = "Додати коментар";
             }
         } else {
-            /*result = await createComment(data);*/
-            result = await commentsApi.create(data);
+            result = await createCommentWithAuth(data);
         }
 
         if (!result.ok) {
@@ -1171,7 +1304,12 @@ if (commentsTableBody) {
             scheduleDelete({
                 message: "Коментар буде видалено",
                 button,
-                deleteAction: () => commentsApi.remove(id),
+                deleteAction: () => {
+                    const item = state.comments.find(c => Number(c.id) === id);
+                    const userId = item?.userId;
+
+                    return deleteCommentWithAuth(id, userId);
+                },
                 afterDelete: async () => {
                     await loadComments();
                 }

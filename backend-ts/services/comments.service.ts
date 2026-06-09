@@ -6,7 +6,6 @@ import {
 } from "../dtos/comments.dto";
 import { commentsRepository } from "../repositories/comments.repository";
 import { resourcesRepository } from "../repositories/resources.repository";
-import { usersRepository } from "../repositories/users.repository";
 import { ApiItemResponse, ApiListResponse } from "../types/api";
 import { CommentEntity, CommentListQuery } from "../types/comment";
 import { HttpError } from "../utils/http-error";
@@ -36,7 +35,12 @@ export class CommentsService {
         const page = normalizePage(query.page);
         const pageSize = normalizePageSize(query.pageSize);
 
-        let items = await commentsRepository.findAll(query);
+        const pagination = {
+            page: query.page ? Number(query.page) : undefined,
+            pageSize: query.pageSize ? Number(query.pageSize) : undefined
+        };
+
+        let items = await commentsRepository.findAll(pagination);
 
         items = items.filter((item) => item.deletedAt === null);
 
@@ -65,9 +69,10 @@ export class CommentsService {
         };
     }
 
-    async getById(id: string): Promise<ApiItemResponse<CommentResponseDto>> {
+    async getById(id: string, currentUserId: number): Promise<ApiItemResponse<CommentResponseDto>> {
         const commentId = normalizeId(id);
-        const comment = await commentsRepository.findById(commentId);
+
+        const comment = await commentsRepository.findByIdForUser(commentId, currentUserId);
 
         if (!comment || comment.deletedAt !== null) {
             throw new HttpError(404, "Comment not found");
@@ -76,22 +81,21 @@ export class CommentsService {
         return { item: toCommentResponseDto(comment) };
     }
 
-    async create(dto: CreateCommentDto): Promise<ApiItemResponse<CommentResponseDto>> {
+    async create(
+        dto: CreateCommentDto,
+        currentUserId: number
+    ): Promise<ApiItemResponse<CommentResponseDto>> {
         const resource = await resourcesRepository.findById(dto.resourceId);
+
         if (!resource) {
             throw new HttpError(404, "Resource not found");
-        }
-
-        const user = await usersRepository.findById(dto.userId);
-        if (!user) {
-            throw new HttpError(404, "User not found");
         }
 
         const now = new Date().toISOString();
 
         const created = await commentsRepository.create({
             resourceId: Number(dto.resourceId),
-            userId: Number(dto.userId),
+            userId: currentUserId,
             text: dto.text,
             createdAt: now,
             updatedAt: now,
@@ -101,30 +105,24 @@ export class CommentsService {
         return { item: toCommentResponseDto(created) };
     }
 
-    async patch(id: string, dto: PatchCommentDto): Promise<ApiItemResponse<CommentResponseDto>> {
+    async patch(
+        id: string,
+        dto: PatchCommentDto,
+        currentUserId: number
+    ): Promise<ApiItemResponse<CommentResponseDto>> {
         const commentId = normalizeId(id);
-        const existing = await commentsRepository.findById(commentId);
-
-        if (!existing || existing.deletedAt !== null) {
-            throw new HttpError(404, "Comment not found");
-        }
 
         if (dto.resourceId !== undefined) {
             const resource = await resourcesRepository.findById(dto.resourceId);
+
             if (!resource) {
                 throw new HttpError(404, "Resource not found");
             }
         }
 
-        if (dto.userId !== undefined) {
-            const user = await usersRepository.findById(dto.userId);
-            if (!user) {
-                throw new HttpError(404, "User not found");
-            }
-        }
-
-        const updated = await commentsRepository.update(commentId, {
-            ...dto,
+        const updated = await commentsRepository.updateForUser(commentId, currentUserId, {
+            resourceId: dto.resourceId !== undefined ? Number(dto.resourceId) : undefined,
+            text: dto.text,
             updatedAt: new Date().toISOString()
         });
 
@@ -135,20 +133,17 @@ export class CommentsService {
         return { item: toCommentResponseDto(updated) };
     }
 
-    async softDelete(id: string): Promise<void> {
+    async softDelete(id: string, currentUserId: number): Promise<void> {
         const commentId = normalizeId(id);
+        const now = new Date().toISOString();
 
-        const existing = await commentsRepository.findById(commentId);
-        if (!existing || existing.deletedAt !== null) {
-            throw new HttpError(404, "Comment not found");
-        }
+        const result = await commentsRepository.softDeleteForUser(
+            commentId,
+            currentUserId,
+            now
+        );
 
-        const updated = await commentsRepository.update(commentId, {
-            deletedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        });
-
-        if (!updated) {
+        if (result.changes === 0) {
             throw new HttpError(404, "Comment not found");
         }
     }

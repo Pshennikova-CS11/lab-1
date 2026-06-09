@@ -1,21 +1,21 @@
 import { RatingEntity } from "../types/rating";
 
 export interface CreateRatingDto {
-    resourceId: string;
-    userId: string;
+    resourceId: number;
+    userId: number;
     value: number;
 }
 
 export interface PatchRatingDto {
-    resourceId?: string;
-    userId?: string;
+    resourceId?: number;
+    userId?: number;
     value?: number;
 }
 
 export interface RatingResponseDto {
-    id: string;
-    resourceId: string;
-    userId: string;
+    id: number;
+    resourceId: number;
+    userId: number;
     value: number;
     createdAt: string;
     updatedAt: string;

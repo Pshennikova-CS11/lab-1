@@ -17,14 +17,13 @@ export interface PatchResourceDto {
 }
 
 export interface ResourceResponseDto {
-    id: string;
+    id: number;
     title: string;
     url: string;
     type: string;
     description: string;
     author: string;
     createdAt: string;
-    updatedAt: string;
 }
 
 export function toResourceResponseDto(resource: ResourceEntity): ResourceResponseDto {
@@ -33,9 +32,8 @@ export function toResourceResponseDto(resource: ResourceEntity): ResourceRespons
         title: resource.title,
         url: resource.url,
         type: resource.type,
-        description: resource.description,
+        description: resource.description || "",
         author: resource.author,
-        createdAt: resource.createdAt,
-        updatedAt: resource.updatedAt
+        createdAt: resource.createdAt
     };
 }
