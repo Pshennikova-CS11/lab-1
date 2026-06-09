@@ -33,6 +33,8 @@ app.use((req, res, next) => {
 
 /*backend дозволяє запити тільки з цих адрес frontend*/
 const allowedOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
     "http://localhost:5173",
@@ -46,7 +48,6 @@ const corsOptions = {
             return callback(null, true);
         }
 
-        /*сервер перевіряє, чи входить origin запиту у список дозволених*/
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
